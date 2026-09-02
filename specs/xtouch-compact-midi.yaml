@@ -1,0 +1,2180 @@
+# X-TOUCH COMPACT Standard MIDI device description
+# Source: Behringer X-TOUCH COMPACT Quick Start Guide, V6.0 (2024)
+# Relevant printed pages: 29 (Layer A TX), 30 (Layer B TX), 32 (RX MIDI DATA)
+#
+# MIDI addresses and documented RX behavior come from the Behringer guide.
+# Fields tagged semantics_source: hardware_observation come from the empirical
+# results in docs/hardware-observations.md rather than the manufacturer guide.
+
+device:
+  manufacturer: "Behringer"
+  model: "X-TOUCH COMPACT"
+  mode: "Standard MIDI Mode"
+  usb_midi: "USB Class Compliant"
+  controls:
+    faders: 9
+    encoders: 16
+    illuminated_buttons: 39
+    encoder_ring_segments: 13
+    layers:
+      - A
+      - B
+
+physical_layout:
+  faders:
+    - id: fader_1
+      index: 1
+      role: channel
+    - id: fader_2
+      index: 2
+      role: channel
+    - id: fader_3
+      index: 3
+      role: channel
+    - id: fader_4
+      index: 4
+      role: channel
+    - id: fader_5
+      index: 5
+      role: channel
+    - id: fader_6
+      index: 6
+      role: channel
+    - id: fader_7
+      index: 7
+      role: channel
+    - id: fader_8
+      index: 8
+      role: channel
+    - id: master_fader
+      index: 9
+      role: master
+  encoders:
+    - id: encoder_1
+      index: 1
+      region: top
+    - id: encoder_2
+      index: 2
+      region: top
+    - id: encoder_3
+      index: 3
+      region: top
+    - id: encoder_4
+      index: 4
+      region: top
+    - id: encoder_5
+      index: 5
+      region: top
+    - id: encoder_6
+      index: 6
+      region: top
+    - id: encoder_7
+      index: 7
+      region: top
+    - id: encoder_8
+      index: 8
+      region: top
+    - id: encoder_9
+      index: 9
+      region: right
+    - id: encoder_10
+      index: 10
+      region: right
+    - id: encoder_11
+      index: 11
+      region: right
+    - id: encoder_12
+      index: 12
+      region: right
+    - id: encoder_13
+      index: 13
+      region: right
+    - id: encoder_14
+      index: 14
+      region: right
+    - id: encoder_15
+      index: 15
+      region: right
+    - id: encoder_16
+      index: 16
+      region: right
+  buttons:
+    - id: upper_top_1
+      group: upper_top
+      position: 1
+    - id: upper_top_2
+      group: upper_top
+      position: 2
+    - id: upper_top_3
+      group: upper_top
+      position: 3
+    - id: upper_top_4
+      group: upper_top
+      position: 4
+    - id: upper_top_5
+      group: upper_top
+      position: 5
+    - id: upper_top_6
+      group: upper_top
+      position: 6
+    - id: upper_top_7
+      group: upper_top
+      position: 7
+    - id: upper_top_8
+      group: upper_top
+      position: 8
+    - id: upper_mid_1
+      group: upper_mid
+      position: 1
+    - id: upper_mid_2
+      group: upper_mid
+      position: 2
+    - id: upper_mid_3
+      group: upper_mid
+      position: 3
+    - id: upper_mid_4
+      group: upper_mid
+      position: 4
+    - id: upper_mid_5
+      group: upper_mid
+      position: 5
+    - id: upper_mid_6
+      group: upper_mid
+      position: 6
+    - id: upper_mid_7
+      group: upper_mid
+      position: 7
+    - id: upper_mid_8
+      group: upper_mid
+      position: 8
+    - id: upper_bottom_1
+      group: upper_bottom
+      position: 1
+    - id: upper_bottom_2
+      group: upper_bottom
+      position: 2
+    - id: upper_bottom_3
+      group: upper_bottom
+      position: 3
+    - id: upper_bottom_4
+      group: upper_bottom
+      position: 4
+    - id: upper_bottom_5
+      group: upper_bottom
+      position: 5
+    - id: upper_bottom_6
+      group: upper_bottom
+      position: 6
+    - id: upper_bottom_7
+      group: upper_bottom
+      position: 7
+    - id: upper_bottom_8
+      group: upper_bottom
+      position: 8
+    - id: lower_1
+      group: lower
+      position: 1
+    - id: lower_2
+      group: lower
+      position: 2
+    - id: lower_3
+      group: lower
+      position: 3
+    - id: lower_4
+      group: lower
+      position: 4
+    - id: lower_5
+      group: lower
+      position: 5
+    - id: lower_6
+      group: lower
+      position: 6
+    - id: lower_7
+      group: lower
+      position: 7
+    - id: lower_8
+      group: lower
+      position: 8
+    - id: lower_9
+      group: lower
+      position: 9
+    - id: right_1
+      group: right
+      position: 1
+    - id: right_2
+      group: right
+      position: 2
+    - id: right_3
+      group: right
+      position: 3
+    - id: right_4
+      group: right
+      position: 4
+    - id: right_5
+      group: right
+      position: 5
+    - id: right_6
+      group: right
+      position: 6
+
+transmit:
+  # What the X-TOUCH sends when its physical controls are operated.
+  # Both factory presets use MIDI Channel 1 according to the MIDI maps.
+  layer_a:
+    name: "Mixer Control"
+    midi_channel: 1
+    faders:
+      fader_1:
+        position:
+          type: control_change
+          number: 1
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 101
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_2:
+        position:
+          type: control_change
+          number: 2
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 102
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_3:
+        position:
+          type: control_change
+          number: 3
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 103
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_4:
+        position:
+          type: control_change
+          number: 4
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 104
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_5:
+        position:
+          type: control_change
+          number: 5
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 105
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_6:
+        position:
+          type: control_change
+          number: 6
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 106
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_7:
+        position:
+          type: control_change
+          number: 7
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 107
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_8:
+        position:
+          type: control_change
+          number: 8
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 108
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      master_fader:
+        position:
+          type: control_change
+          number: 9
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 109
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+    encoders:
+      encoder_1:
+        turn:
+          type: control_change
+          number: 10
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 0
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_2:
+        turn:
+          type: control_change
+          number: 11
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 1
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_3:
+        turn:
+          type: control_change
+          number: 12
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 2
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_4:
+        turn:
+          type: control_change
+          number: 13
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 3
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_5:
+        turn:
+          type: control_change
+          number: 14
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 4
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_6:
+        turn:
+          type: control_change
+          number: 15
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 5
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_7:
+        turn:
+          type: control_change
+          number: 16
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 6
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_8:
+        turn:
+          type: control_change
+          number: 17
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 7
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_9:
+        turn:
+          type: control_change
+          number: 18
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 8
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_10:
+        turn:
+          type: control_change
+          number: 19
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 9
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_11:
+        turn:
+          type: control_change
+          number: 20
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 10
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_12:
+        turn:
+          type: control_change
+          number: 21
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 11
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_13:
+        turn:
+          type: control_change
+          number: 22
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 12
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_14:
+        turn:
+          type: control_change
+          number: 23
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 13
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_15:
+        turn:
+          type: control_change
+          number: 24
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 14
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_16:
+        turn:
+          type: control_change
+          number: 25
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 15
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+    buttons:
+      upper_top_1:
+        type: note
+        number: 16
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_2:
+        type: note
+        number: 17
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_3:
+        type: note
+        number: 18
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_4:
+        type: note
+        number: 19
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_5:
+        type: note
+        number: 20
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_6:
+        type: note
+        number: 21
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_7:
+        type: note
+        number: 22
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_8:
+        type: note
+        number: 23
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_1:
+        type: note
+        number: 24
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_2:
+        type: note
+        number: 25
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_3:
+        type: note
+        number: 26
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_4:
+        type: note
+        number: 27
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_5:
+        type: note
+        number: 28
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_6:
+        type: note
+        number: 29
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_7:
+        type: note
+        number: 30
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_8:
+        type: note
+        number: 31
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_1:
+        type: note
+        number: 32
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_2:
+        type: note
+        number: 33
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_3:
+        type: note
+        number: 34
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_4:
+        type: note
+        number: 35
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_5:
+        type: note
+        number: 36
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_6:
+        type: note
+        number: 37
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_7:
+        type: note
+        number: 38
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_8:
+        type: note
+        number: 39
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_1:
+        type: note
+        number: 40
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_2:
+        type: note
+        number: 41
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_3:
+        type: note
+        number: 42
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_4:
+        type: note
+        number: 43
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_5:
+        type: note
+        number: 44
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_6:
+        type: note
+        number: 45
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_7:
+        type: note
+        number: 46
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_8:
+        type: note
+        number: 47
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_9:
+        type: note
+        number: 48
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_1:
+        type: note
+        number: 49
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_2:
+        type: note
+        number: 50
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_3:
+        type: note
+        number: 51
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_4:
+        type: note
+        number: 52
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_5:
+        type: note
+        number: 53
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_6:
+        type: note
+        number: 54
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+    foot_controls:
+      expression_pedal:
+        type: control_change
+        number: 26
+      foot_switch:
+        type: control_change
+        number: 27
+
+  layer_b:
+    name: "Instrument Control"
+    midi_channel: 1
+    faders:
+      fader_1:
+        position:
+          type: control_change
+          number: 28
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 111
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_2:
+        position:
+          type: control_change
+          number: 29
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 112
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_3:
+        position:
+          type: control_change
+          number: 30
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 113
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_4:
+        position:
+          type: control_change
+          number: 31
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 114
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_5:
+        position:
+          type: control_change
+          number: 32
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 115
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_6:
+        position:
+          type: control_change
+          number: 33
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 116
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_7:
+        position:
+          type: control_change
+          number: 34
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 117
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      fader_8:
+        position:
+          type: control_change
+          number: 35
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 118
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+      master_fader:
+        position:
+          type: control_change
+          number: 36
+          value_min: 0
+          value_max: 127
+        touch:
+          type: control_change
+          number: 119
+          touched_value: 127
+          released_value: 0
+          semantics_source: hardware_observation
+    encoders:
+      encoder_1:
+        turn:
+          type: control_change
+          number: 37
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 55
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_2:
+        turn:
+          type: control_change
+          number: 38
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 56
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_3:
+        turn:
+          type: control_change
+          number: 39
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 57
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_4:
+        turn:
+          type: control_change
+          number: 40
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 58
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_5:
+        turn:
+          type: control_change
+          number: 41
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 59
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_6:
+        turn:
+          type: control_change
+          number: 42
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 60
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_7:
+        turn:
+          type: control_change
+          number: 43
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 61
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_8:
+        turn:
+          type: control_change
+          number: 44
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 62
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_9:
+        turn:
+          type: control_change
+          number: 45
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 63
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_10:
+        turn:
+          type: control_change
+          number: 46
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 64
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_11:
+        turn:
+          type: control_change
+          number: 47
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 65
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_12:
+        turn:
+          type: control_change
+          number: 48
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 66
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_13:
+        turn:
+          type: control_change
+          number: 49
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 67
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_14:
+        turn:
+          type: control_change
+          number: 50
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 68
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_15:
+        turn:
+          type: control_change
+          number: 51
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 69
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+      encoder_16:
+        turn:
+          type: control_change
+          number: 52
+          value_semantics: absolute_7_bit
+          acceleration: true
+          repeated_boundary_values: true
+          semantics_source: hardware_observation
+        push:
+          type: note
+          number: 70
+          press_velocity: 127
+          release_semantics: note_off_velocity_0
+          semantics_source: hardware_observation
+    buttons:
+      upper_top_1:
+        type: note
+        number: 71
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_2:
+        type: note
+        number: 72
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_3:
+        type: note
+        number: 73
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_4:
+        type: note
+        number: 74
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_5:
+        type: note
+        number: 75
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_6:
+        type: note
+        number: 76
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_7:
+        type: note
+        number: 77
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_top_8:
+        type: note
+        number: 78
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_1:
+        type: note
+        number: 79
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_2:
+        type: note
+        number: 80
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_3:
+        type: note
+        number: 81
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_4:
+        type: note
+        number: 82
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_5:
+        type: note
+        number: 83
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_6:
+        type: note
+        number: 84
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_7:
+        type: note
+        number: 85
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_mid_8:
+        type: note
+        number: 86
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_1:
+        type: note
+        number: 87
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_2:
+        type: note
+        number: 88
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_3:
+        type: note
+        number: 89
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_4:
+        type: note
+        number: 90
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_5:
+        type: note
+        number: 91
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_6:
+        type: note
+        number: 92
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_7:
+        type: note
+        number: 93
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      upper_bottom_8:
+        type: note
+        number: 94
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_1:
+        type: note
+        number: 95
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_2:
+        type: note
+        number: 96
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_3:
+        type: note
+        number: 97
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_4:
+        type: note
+        number: 98
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_5:
+        type: note
+        number: 99
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_6:
+        type: note
+        number: 100
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_7:
+        type: note
+        number: 101
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_8:
+        type: note
+        number: 102
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      lower_9:
+        type: note
+        number: 103
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_1:
+        type: note
+        number: 104
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_2:
+        type: note
+        number: 105
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_3:
+        type: note
+        number: 106
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_4:
+        type: note
+        number: 107
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_5:
+        type: note
+        number: 108
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+      right_6:
+        type: note
+        number: 109
+        press_velocity: 127
+        release_semantics: note_off_velocity_0
+        semantics_source: hardware_observation
+    foot_controls:
+      expression_pedal:
+        type: control_change
+        number: 63
+      foot_switch:
+        type: control_change
+        number: 64
+
+receive:
+  # What an external host can control via MIDI receive.
+  # The guide specifies these commands on GLOBAL CH rather than Layer A/B.
+  # GLOBAL_CH is runtime device configuration in the user-facing range 1-16;
+  # it is not the factory TX channel declared under each preset above.
+  channel: GLOBAL_CH
+  operation_mode:
+    type: control_change
+    number: 127
+    values:
+      standard: 0
+      mackie_control: 1
+      ignored: '2-127'
+  preset_layer:
+    type: program_change
+    applies_in: standard_mode_only
+    values:
+      layer_a: 0
+      layer_b: 1
+      ignored: '2-127'
+  faders:
+    fader_1:
+      type: control_change
+      number: 1
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_2:
+      type: control_change
+      number: 2
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_3:
+      type: control_change
+      number: 3
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_4:
+      type: control_change
+      number: 4
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_5:
+      type: control_change
+      number: 5
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_6:
+      type: control_change
+      number: 6
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_7:
+      type: control_change
+      number: 7
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    fader_8:
+      type: control_change
+      number: 8
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+    master_fader:
+      type: control_change
+      number: 9
+      value_min: 0
+      value_max: 127
+      direction: bottom_to_top
+  encoder_rings:
+    encoder_1:
+      behavior:
+        type: control_change
+        number: 10
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 26
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_2:
+      behavior:
+        type: control_change
+        number: 11
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 27
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_3:
+      behavior:
+        type: control_change
+        number: 12
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 28
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_4:
+      behavior:
+        type: control_change
+        number: 13
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 29
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_5:
+      behavior:
+        type: control_change
+        number: 14
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 30
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_6:
+      behavior:
+        type: control_change
+        number: 15
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 31
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_7:
+      behavior:
+        type: control_change
+        number: 16
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 32
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_8:
+      behavior:
+        type: control_change
+        number: 17
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 33
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_9:
+      behavior:
+        type: control_change
+        number: 18
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 34
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_10:
+      behavior:
+        type: control_change
+        number: 19
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 35
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_11:
+      behavior:
+        type: control_change
+        number: 20
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 36
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_12:
+      behavior:
+        type: control_change
+        number: 21
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 37
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_13:
+      behavior:
+        type: control_change
+        number: 22
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 38
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_14:
+      behavior:
+        type: control_change
+        number: 23
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 39
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_15:
+      behavior:
+        type: control_change
+        number: 24
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 40
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+    encoder_16:
+      behavior:
+        type: control_change
+        number: 25
+        values:
+          single: 0
+          pan: 1
+          fan: 2
+          spread: 3
+          trim: 4
+          ignored: '5-127'
+      value:
+        type: control_change
+        number: 41
+        values:
+          all_off: 0
+          segment_on: '1-13  # LED 1 (left) through LED 13 (right)'
+          segment_blink: '14-26  # LED 1 through LED 13 blinking'
+          all_on: 27
+          all_blink: 28
+          ignored: '29-127'
+  encoder_ring_value_semantics:
+    position_min: 1
+    position_max: 13
+    encoded_values:
+      all_off: 0
+      position_offset: 0
+      blinking_position_offset: 13
+      all_on: 27
+      all_blinking: 28
+  button_led_value_semantics:
+    semantics_source: hardware_observation
+    encoded_values:
+      "off": 0
+      "on": 2
+      blink: 3
+    effective:
+      "off": 'note_on velocity 0-1'
+      "on": 'note_on velocity 2'
+      blink: 'note_on velocity 3'
+      ignored: 'note_on velocity 4-127'
+    documented_by_manufacturer:
+      "off": 'note_off OR note_on velocity 0'
+      "on": 'note_on velocity 1'
+      blink: 'note_on velocity 2'
+      ignored: 'note_on velocity 3-127'
+  button_leds:
+    upper_top_1:
+      type: note
+      number: 0
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_2:
+      type: note
+      number: 1
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_3:
+      type: note
+      number: 2
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_4:
+      type: note
+      number: 3
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_5:
+      type: note
+      number: 4
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_6:
+      type: note
+      number: 5
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_7:
+      type: note
+      number: 6
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_top_8:
+      type: note
+      number: 7
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_1:
+      type: note
+      number: 8
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_2:
+      type: note
+      number: 9
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_3:
+      type: note
+      number: 10
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_4:
+      type: note
+      number: 11
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_5:
+      type: note
+      number: 12
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_6:
+      type: note
+      number: 13
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_7:
+      type: note
+      number: 14
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_mid_8:
+      type: note
+      number: 15
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_1:
+      type: note
+      number: 16
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_2:
+      type: note
+      number: 17
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_3:
+      type: note
+      number: 18
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_4:
+      type: note
+      number: 19
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_5:
+      type: note
+      number: 20
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_6:
+      type: note
+      number: 21
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_7:
+      type: note
+      number: 22
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    upper_bottom_8:
+      type: note
+      number: 23
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_1:
+      type: note
+      number: 24
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_2:
+      type: note
+      number: 25
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_3:
+      type: note
+      number: 26
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_4:
+      type: note
+      number: 27
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_5:
+      type: note
+      number: 28
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_6:
+      type: note
+      number: 29
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_7:
+      type: note
+      number: 30
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_8:
+      type: note
+      number: 31
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    lower_9:
+      type: note
+      number: 32
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    right_1:
+      type: note
+      number: 33
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    right_2:
+      type: note
+      number: 34
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    right_3:
+      type: note
+      number: 35
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    right_4:
+      type: note
+      number: 36
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    right_5:
+      type: note
+      number: 37
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+    right_6:
+      type: note
+      number: 38
+      values:
+        "off": 'note_on velocity 0-1'
+        "on": 'note_on velocity 2'
+        blink: 'note_on velocity 3'
+        ignored: 'note_on velocity 4-127'
+  layer_leds:
+    assignable: false
+    behavior: "Only one of Layer A/B LEDs lights in Standard mode; controlled indirectly by Preset Layer Change."
+  status_leds:
+    foot_switch:
+      type: control_change
+      number: 42
+      encoded_values:
+        "off": 0
+        "on": 127
+      values:
+        "off": '0-63'
+        "on": '64-127'
+    expression_pedal:
+      type: control_change
+      number: 43
+      behavior: "LED is on only while data transfer/value change occurs."
+    mc_mode:
+      assignable: false
+      behavior: "Lights only when MC mode is selected."
+    usb:
+      assignable: false
+      behavior: "Active when a valid computer connection is available."
+    midi_io:
+      assignable: false
+      behavior: "Active during MIDI data transfer."
+
+unverified:
+  - >-
+    Cause of one isolated Layer A CC 1 value 0 during an untouched host-driven
+    sweep.
+  - >-
+    Interaction between physical button press/release and host-controlled LED
+    state.
+
+characterized_runtime:
+  fader_host_feedback:
+    semantics_source: hardware_observation
+    representative_control: fader_1
+    representative_layer: layer_a
+    touch_motor_policy: physical_touch_overrides_motor
+    host_position_while_touched: deferred
+    deferred_position_policy: last_received_wins
+    deferred_position_applied: on_touch_release
+    reproducible_position_echo: false
+    isolated_observation: >-
+      One CC 1 value 0 occurred during an untouched sweep and did not recur over
+      three endpoint cycles.
