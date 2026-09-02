@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any
+from typing import Any, cast
 
 from ._specification_common import (
     Interaction,
@@ -22,12 +22,15 @@ from .controls import Button, Encoder, Fader, FootControl, Layer, MappedControl
 
 
 def _tx_control(group: str, physical_id: str, location: str) -> MappedControl:
-    enum_type = {
-        "faders": Fader,
-        "encoders": Encoder,
-        "buttons": Button,
-        "foot_controls": FootControl,
-    }[group]
+    enum_type = cast(
+        "type[MappedControl]",
+        {
+            "faders": Fader,
+            "encoders": Encoder,
+            "buttons": Button,
+            "foot_controls": FootControl,
+        }[group],
+    )
     return _enum_member(enum_type, physical_id, location)
 
 

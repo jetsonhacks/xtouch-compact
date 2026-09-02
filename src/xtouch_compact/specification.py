@@ -36,9 +36,7 @@ __all__ = [
 ]
 
 _PACKAGED_SPEC_PATH = Path(__file__).parent / "data" / "xtouch-compact-midi.yaml"
-_REPOSITORY_SPEC_PATH = (
-    Path(__file__).parents[2] / "specs" / "xtouch-compact-midi.yaml"
-)
+_REPOSITORY_SPEC_PATH = Path(__file__).parents[2] / "specs" / "xtouch-compact-midi.yaml"
 DEFAULT_SPEC_PATH = (
     _PACKAGED_SPEC_PATH if _PACKAGED_SPEC_PATH.is_file() else _REPOSITORY_SPEC_PATH
 )

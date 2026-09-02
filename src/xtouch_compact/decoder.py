@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ._specification_common import _as_int
 from .controls import Button, Encoder, Fader
 from .events import (
     ButtonPressed,
@@ -61,8 +62,8 @@ def _decode_binding(
     if binding.interaction is Interaction.FADER_POSITION:
         if not isinstance(raw, ControlChange) or not isinstance(binding.control, Fader):
             return None
-        minimum = int(binding.details["value_min"])
-        maximum = int(binding.details["value_max"])
+        minimum = _as_int(binding.details["value_min"])
+        maximum = _as_int(binding.details["value_max"])
         if not minimum <= raw.value <= maximum:
             return None
         return FaderPositionReported(binding.control, binding.layer, raw.value, raw)

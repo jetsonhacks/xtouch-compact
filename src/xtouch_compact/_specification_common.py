@@ -94,6 +94,18 @@ def _integer(value: object, location: str, minimum: int, maximum: int) -> int:
     return value
 
 
+def _as_int(value: object) -> int:
+    """Narrow one already-loaded detail value to ``int`` for encode/decode use.
+
+    Unlike :func:`_integer`, this runs after specification load, against a
+    single ``details`` entry rather than a YAML document location, so it has
+    no bounds and no dotted location string for its error message.
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise SpecificationError(f"expected an integer detail value, got {value!r}")
+    return value
+
+
 def _message_type(value: object, location: str) -> MidiMessageType:
     try:
         return MidiMessageType(value)

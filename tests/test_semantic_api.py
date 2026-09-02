@@ -181,9 +181,7 @@ def test_encoder_ring_display_rejects_invalid_kind() -> None:
 def test_layer_selection_uses_same_specification_mapping_as_initialization(
     specification: DeviceSpecification, build_session: SessionBuilder
 ) -> None:
-    device, transport = build_session(
-        global_midi_channel=7, startup_layer=Layer.B
-    )
+    device, transport = build_session(global_midi_channel=7, startup_layer=Layer.B)
 
     device.connect()
     device.initialize()

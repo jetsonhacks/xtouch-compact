@@ -104,9 +104,7 @@ def validate_semantic_values(document: dict[str, Any]) -> None:
         )
 
     status = _mapping(receive.get("status_leds"), "receive.status_leds")
-    foot_switch = _mapping(
-        status.get("foot_switch"), "receive.status_leds.foot_switch"
-    )
+    foot_switch = _mapping(status.get("foot_switch"), "receive.status_leds.foot_switch")
     foot_values = _mapping(
         foot_switch.get("encoded_values"),
         "receive.status_leds.foot_switch.encoded_values",
@@ -178,13 +176,13 @@ def build_rx_index(document: dict[str, Any]) -> Mapping[MidiAddress, RxBinding]:
                 control,
             )
     status_leds = _mapping(receive.get("status_leds"), "receive.status_leds")
-    for physical_id in (FootControl.FOOT_SWITCH, FootControl.EXPRESSION_PEDAL):
+    for foot_control in (FootControl.FOOT_SWITCH, FootControl.EXPRESSION_PEDAL):
         _rx_mapping(
             index,
-            status_leds.get(physical_id.value),
-            f"receive.status_leds.{physical_id.value}",
+            status_leds.get(foot_control.value),
+            f"receive.status_leds.{foot_control.value}",
             "status_led",
-            physical_id,
+            foot_control,
         )
     for required_section in ("button_led_value_semantics", "layer_leds"):
         _mapping(receive.get(required_section), f"receive.{required_section}")

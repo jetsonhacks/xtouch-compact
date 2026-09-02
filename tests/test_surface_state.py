@@ -92,8 +92,7 @@ def test_transport_button_press_invalidates_group_for_led_reassertion(
     assert session.button_feedback_state(Button.PLAY).last_sent is None
     assert session.button_feedback_state(Button.RECORD).last_sent is None
     assert (
-        session.button_feedback_state(Button.UPPER_TOP_1).last_sent
-        is ButtonLedState.ON
+        session.button_feedback_state(Button.UPPER_TOP_1).last_sent is ButtonLedState.ON
     )
 
     session.set_button_led(Button.PLAY, ButtonLedState.ON)

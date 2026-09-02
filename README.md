@@ -39,11 +39,12 @@ uv sync
 
 That creates `.venv`, installs `alsa-midi` and `PyYAML`, and installs this
 package in editable mode. The lockfile pins the exact versions. Dev tools
-(`pytest`, `ruff`) are included.
+(`pytest`, `ruff`, `mypy`) are included.
 
 ```bash
 uv run pytest
 uv run ruff check .
+uv run mypy
 ```
 
 GitHub Actions runs those same checks on every push and pull request, on

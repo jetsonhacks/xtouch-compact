@@ -105,9 +105,7 @@ def test_loader_rejects_incomplete_semantic_encodings(
     spec_path: Path, tmp_path: Path
 ) -> None:
     def remove_encoding(document: dict[str, object]) -> None:
-        del document["receive"]["button_led_value_semantics"]["encoded_values"][
-            "blink"
-        ]
+        del document["receive"]["button_led_value_semantics"]["encoded_values"]["blink"]
 
     path = _modified_spec(spec_path, tmp_path, remove_encoding)
 

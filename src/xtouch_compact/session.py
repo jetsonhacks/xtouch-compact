@@ -44,9 +44,7 @@ def _validate_session_construction(
     ):
         raise SessionConfigurationError("global_midi_channel must be an integer")
     if not 1 <= global_midi_channel <= 16:
-        raise SessionConfigurationError(
-            "global_midi_channel must be from 1 through 16"
-        )
+        raise SessionConfigurationError("global_midi_channel must be from 1 through 16")
     if not isinstance(startup_layer, Layer):
         raise SessionConfigurationError("startup_layer must be a Layer")
 
@@ -336,26 +334,36 @@ class XTouchCompactSession:
         """Send only desired feedback that differs from last-sent state."""
         self._require_ready()
         snapshot = self._surface.snapshot()
-        for state in snapshot.buttons:
-            if state.desired is not None and state.desired != state.last_sent:
-                self.set_button_led(state.button, state.desired)
-        for state in snapshot.encoders:
+        for button_state in snapshot.buttons:
             if (
-                state.desired_mode is not None
-                and state.desired_mode != state.last_sent_mode
+                button_state.desired is not None
+                and button_state.desired != button_state.last_sent
             ):
-                self.set_encoder_ring_mode(state.encoder, state.desired_mode)
+                self.set_button_led(button_state.button, button_state.desired)
+        for encoder_state in snapshot.encoders:
             if (
-                state.desired_display is not None
-                and state.desired_display != state.last_sent_display
+                encoder_state.desired_mode is not None
+                and encoder_state.desired_mode != encoder_state.last_sent_mode
             ):
-                self.set_encoder_ring_value(state.encoder, state.desired_display)
+                self.set_encoder_ring_mode(
+                    encoder_state.encoder, encoder_state.desired_mode
+                )
+            if (
+                encoder_state.desired_display is not None
+                and encoder_state.desired_display != encoder_state.last_sent_display
+            ):
+                self.set_encoder_ring_value(
+                    encoder_state.encoder, encoder_state.desired_display
+                )
         layer = snapshot.layer
         if layer.desired is not None and layer.desired != layer.last_sent:
             self.select_layer(layer.desired)
-        for state in snapshot.status_leds:
-            if state.desired is not None and state.desired != state.last_sent:
-                self.set_foot_switch_led(state.desired)
+        for status_state in snapshot.status_leds:
+            if (
+                status_state.desired is not None
+                and status_state.desired != status_state.last_sent
+            ):
+                self.set_foot_switch_led(status_state.desired)
 
     def __enter__(self) -> XTouchCompactSession:
         """Connect and initialize, returning the session in ``READY``."""

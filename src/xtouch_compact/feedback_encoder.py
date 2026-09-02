@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from ._specification_common import _as_int
 from .controls import Button, Encoder, Fader, FootControl, Layer, MappedControl
 from .errors import SpecificationError, UnsupportedOperationError
 from .feedback import (
@@ -42,7 +43,7 @@ class SemanticFeedbackEncoder:
         return NoteOn(
             self._global_midi_channel,
             self._address_number(binding),
-            int(value),
+            _as_int(value),
         )
 
     def encoder_ring_mode(
@@ -58,7 +59,7 @@ class SemanticFeedbackEncoder:
             raise UnsupportedOperationError(
                 f"unsupported encoder ring mode {mode!r}"
             ) from error
-        return self._control_change(binding, int(value))
+        return self._control_change(binding, _as_int(value))
 
     def encoder_ring_value(
         self, encoder: Encoder, display: EncoderRingDisplay
@@ -78,28 +79,27 @@ class SemanticFeedbackEncoder:
             EncoderRingDisplayKind.POSITION,
             EncoderRingDisplayKind.BLINKING_POSITION,
         }:
-            minimum = int(semantics["position_min"])
-            maximum = int(semantics["position_max"])
+            minimum = _as_int(semantics["position_min"])
+            maximum = _as_int(semantics["position_max"])
             position = display.position
             if position is None or not minimum <= position <= maximum:
                 raise UnsupportedOperationError(
-                    "encoder ring position must be from "
-                    f"{minimum} through {maximum}"
+                    f"encoder ring position must be from {minimum} through {maximum}"
                 )
             offset_name = (
                 "position_offset"
                 if kind is EncoderRingDisplayKind.POSITION
                 else "blinking_position_offset"
             )
-            value = position + int(values[offset_name])
+            value = position + _as_int(values[offset_name])
         else:
             try:
-                value = values[kind.value]
+                value = _as_int(values[kind.value])
             except KeyError as error:
                 raise UnsupportedOperationError(
                     f"unsupported encoder ring display {display!r}"
                 ) from error
-        return self._control_change(binding, int(value))
+        return self._control_change(binding, value)
 
     def layer(self, layer: Layer) -> ProgramChange:
         binding = self._specification.rx_control_index[(None, "preset_layer")]
@@ -110,7 +110,7 @@ class SemanticFeedbackEncoder:
             value = values[layer.value]
         except (AttributeError, KeyError) as error:
             raise UnsupportedOperationError(f"unsupported layer {layer!r}") from error
-        return ProgramChange(self._global_midi_channel, int(value))
+        return ProgramChange(self._global_midi_channel, _as_int(value))
 
     def foot_switch_led(self, state: StatusLedState) -> ControlChange:
         binding = self._rx_binding(
@@ -125,7 +125,7 @@ class SemanticFeedbackEncoder:
             raise UnsupportedOperationError(
                 f"unsupported status LED state {state!r}"
             ) from error
-        return self._control_change(binding, int(value))
+        return self._control_change(binding, _as_int(value))
 
     def _rx_binding(
         self,

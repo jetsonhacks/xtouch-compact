@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xtouch-compact"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python library for the Behringer X-TOUCH COMPACT on Linux ALSA Sequencer, in Standard MIDI mode"
 readme = "README.md"
 license = { text = "MIT" }
@@ -35,15 +35,24 @@ Issues = "https://github.com/jetsonhacks/xtouch-compact/issues"
 
 [dependency-groups]
 dev = [
+    "mypy>=2.3.1",
     "pytest>=8.3",
+    "pytest-cov>=7.1.0",
     "ruff>=0.11",
+    "types-pyyaml>=6.0.12.20260815",
 ]
+
+[tool.hatch.version]
+path = "src/xtouch_compact/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
     "src/xtouch_compact",
     "specs/xtouch-compact-midi.yaml",
+    "tests",
+    "docs",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
 ]
 
@@ -57,9 +66,25 @@ packages = ["src/xtouch_compact"]
 addopts = "-ra"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["xtouch_compact"]
+
+[tool.coverage.report]
+fail_under = 90
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["xtouch_compact"]
+strict = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "alsa_midi.*"
+ignore_missing_imports = true
