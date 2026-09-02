@@ -1,8 +1,8 @@
 from dataclasses import FrozenInstanceError
-from pathlib import Path
 
 import pytest
 
+from tests.helpers import FakeTransport, SessionBuilder
 from xtouch_compact import (
     ControlChange,
     Fader,
@@ -11,42 +11,7 @@ from xtouch_compact import (
     FaderReleased,
     FaderTouched,
     XTouchCompactSession,
-    load_device_specification,
 )
-
-SPEC_PATH = Path(__file__).parents[1] / "specs" / "xtouch-compact-midi.yaml"
-
-
-class FakeTransport:
-    def __init__(self) -> None:
-        self.messages: list[ControlChange] = []
-        self.sent: list[object] = []
-
-    def connect(self) -> object:
-        return object()
-
-    def receive(self, timeout: float | None = None) -> ControlChange | None:
-        return self.messages.pop(0) if self.messages else None
-
-    def send(self, message: object) -> None:
-        self.sent.append(message)
-
-    def close(self) -> None:
-        pass
-
-
-@pytest.fixture
-def ready_session() -> tuple[XTouchCompactSession, FakeTransport]:
-    transport = FakeTransport()
-    session = XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
-    session.connect()
-    session.initialize()
-    transport.sent.clear()
-    return session, transport
 
 
 def receive(
@@ -197,12 +162,10 @@ def test_close_resets_fader_state_and_snapshots_are_immutable(
     assert reset.owner is FaderOwner.APPLICATION
 
 
-def test_fader_request_before_ready_does_not_change_state() -> None:
-    session = XTouchCompactSession(
-        FakeTransport(),
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
+def test_fader_request_before_ready_does_not_change_state(
+    build_session: SessionBuilder,
+) -> None:
+    session, _ = build_session()
 
     with pytest.raises(RuntimeError, match="unasserted"):
         session.set_fader(Fader.CHANNEL_1, 70)

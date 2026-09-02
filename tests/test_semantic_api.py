@@ -1,11 +1,11 @@
-from pathlib import Path
-
 import pytest
 
+from tests.helpers import FakeTransport, SessionBuilder
 from xtouch_compact import (
     Button,
     ButtonLedState,
     ControlChange,
+    DeviceSpecification,
     Encoder,
     EncoderRingDisplay,
     EncoderRingMode,
@@ -16,41 +16,7 @@ from xtouch_compact import (
     ProgramChange,
     StatusLedState,
     XTouchCompactSession,
-    load_device_specification,
 )
-
-SPEC_PATH = Path(__file__).parents[1] / "specs" / "xtouch-compact-midi.yaml"
-
-
-class FakeTransport:
-    def __init__(self) -> None:
-        self.sent: list[object] = []
-
-    def connect(self) -> object:
-        return object()
-
-    def receive(self, timeout: float | None = None) -> None:
-        return None
-
-    def send(self, message: object) -> None:
-        self.sent.append(message)
-
-    def close(self) -> None:
-        pass
-
-
-@pytest.fixture
-def ready_session() -> tuple[XTouchCompactSession, FakeTransport]:
-    transport = FakeTransport()
-    device = XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
-    device.connect()
-    device.initialize()
-    transport.sent.clear()
-    return device, transport
 
 
 @pytest.mark.parametrize("fader", list(Fader))
@@ -211,14 +177,11 @@ def test_encoder_ring_display_rejects_invalid_kind() -> None:
         EncoderRingDisplay("position", 1)  # type: ignore[arg-type]
 
 
-def test_layer_selection_uses_same_specification_mapping_as_initialization() -> None:
-    specification = load_device_specification(SPEC_PATH)
-    transport = FakeTransport()
-    device = XTouchCompactSession(
-        transport,
-        specification,
-        global_midi_channel=7,
-        startup_layer=Layer.B,
+def test_layer_selection_uses_same_specification_mapping_as_initialization(
+    specification: DeviceSpecification, build_session: SessionBuilder
+) -> None:
+    device, transport = build_session(
+        global_midi_channel=7, startup_layer=Layer.B
     )
 
     device.connect()
@@ -266,13 +229,10 @@ def test_foot_switch_status_led_uses_its_rx_mapping(
         lambda device: device.set_foot_switch_led(StatusLedState.ON),
     ],
 )
-def test_semantic_output_requires_ready_session(operation: object) -> None:
-    transport = FakeTransport()
-    device = XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
+def test_semantic_output_requires_ready_session(
+    build_session: SessionBuilder, operation: object
+) -> None:
+    device, transport = build_session()
 
     with pytest.raises(RuntimeError, match="unasserted"):
         operation(device)  # type: ignore[operator]

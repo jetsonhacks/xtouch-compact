@@ -1,17 +1,16 @@
 """Tests for the M8 stable application interface.
 
-Every import in this file comes from the package root. This file exists to
-guard the supported downstream contract: package exports, lifecycle,
-semantic outputs, event consumption, fader/surface state inspection,
-exceptions, and reconnect, all reached without importing implementation
-modules directly.
+Library imports in this file come from the package root. Test doubles come
+from ``tests.helpers``. This file exists to guard the supported downstream
+contract: package exports, lifecycle, semantic outputs, event consumption,
+fader/surface state inspection, exceptions, and reconnect, all reached
+without importing implementation modules directly.
 """
-
-from pathlib import Path
 
 import pytest
 
 import xtouch_compact
+from tests.helpers import FakeTransport, SessionBuilder
 from xtouch_compact import (
     AmbiguousDeviceError,
     Button,
@@ -34,11 +33,7 @@ from xtouch_compact import (
     TransportError,
     UnsupportedOperationError,
     XTouchCompactError,
-    XTouchCompactSession,
-    load_device_specification,
 )
-
-SPEC_PATH = Path(__file__).parents[1] / "specs" / "xtouch-compact-midi.yaml"
 
 EXPECTED_PUBLIC_EXPORTS = {
     "DEFAULT_SPEC_PATH",
@@ -97,38 +92,6 @@ EXPECTED_PUBLIC_EXPORTS = {
 }
 
 
-class FakeTransport:
-    def __init__(self, messages: list[object] | None = None) -> None:
-        self.messages = list(messages or [])
-        self.connected = False
-        self.sent: list[object] = []
-
-    def connect(self) -> object:
-        self.connected = True
-        return object()
-
-    def receive(self, timeout: float | None = None) -> object | None:
-        return self.messages.pop(0) if self.messages else None
-
-    def send(self, message: object) -> None:
-        self.sent.append(message)
-
-    def close(self) -> None:
-        self.connected = False
-
-
-def build_session(
-    transport: FakeTransport | None = None,
-) -> tuple[XTouchCompactSession, FakeTransport]:
-    transport = transport or FakeTransport()
-    device_session = XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
-    return device_session, transport
-
-
 class TestPackageExports:
     def test_expected_public_names_are_importable(self) -> None:
         for name in EXPECTED_PUBLIC_EXPORTS:
@@ -141,7 +104,9 @@ class TestPackageExports:
 
 
 class TestLifecycle:
-    def test_methods_before_connect_require_connection_or_ready(self) -> None:
+    def test_methods_before_connect_require_connection_or_ready(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         assert device_session.state is SessionState.DISCONNECTED
         with pytest.raises(LifecycleError):
@@ -149,20 +114,26 @@ class TestLifecycle:
         with pytest.raises(LifecycleError):
             device_session.receive()
 
-    def test_connect_then_initialize_reaches_ready(self) -> None:
+    def test_connect_then_initialize_reaches_ready(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         device_session.connect()
         assert device_session.state is SessionState.STARTUP_LAYER_UNASSERTED
         device_session.initialize()
         assert device_session.state is SessionState.READY
 
-    def test_double_connect_is_a_lifecycle_error(self) -> None:
+    def test_double_connect_is_a_lifecycle_error(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         device_session.connect()
         with pytest.raises(LifecycleError):
             device_session.connect()
 
-    def test_close_is_idempotent_and_session_is_reusable(self) -> None:
+    def test_close_is_idempotent_and_session_is_reusable(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         device_session.connect()
         device_session.initialize()
@@ -173,7 +144,9 @@ class TestLifecycle:
         device_session.initialize()
         assert device_session.state is SessionState.READY
 
-    def test_context_manager_connects_initializes_and_closes(self) -> None:
+    def test_context_manager_connects_initializes_and_closes(
+        self, build_session: SessionBuilder
+    ) -> None:
         transport = FakeTransport()
         device_session, _ = build_session(transport)
         with device_session as entered:
@@ -181,13 +154,17 @@ class TestLifecycle:
             assert entered.state is SessionState.READY
         assert device_session.state is SessionState.DISCONNECTED
 
-    def test_context_manager_closes_on_exception(self) -> None:
+    def test_context_manager_closes_on_exception(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         with pytest.raises(ValueError, match="boom"), device_session:
             raise ValueError("boom")
         assert device_session.state is SessionState.DISCONNECTED
 
-    def test_context_manager_closes_when_initialization_fails(self) -> None:
+    def test_context_manager_closes_when_initialization_fails(
+        self, build_session: SessionBuilder
+    ) -> None:
         class InitializationFailureTransport(FakeTransport):
             def send(self, message: object) -> None:
                 raise ValueError("initialization failed")
@@ -202,7 +179,9 @@ class TestLifecycle:
 
 
 class TestSemanticOutputs:
-    def test_set_button_led_sends_and_deduplicates(self) -> None:
+    def test_set_button_led_sends_and_deduplicates(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, transport = build_session()
         device_session.connect()
         device_session.initialize()
@@ -213,7 +192,7 @@ class TestSemanticOutputs:
         device_session.set_button_led(Button.PLAY, ButtonLedState.ON)
         assert len(transport.sent) == 1
 
-    def test_select_layer_always_transmits(self) -> None:
+    def test_select_layer_always_transmits(self, build_session: SessionBuilder) -> None:
         device_session, transport = build_session()
         device_session.connect()
         device_session.initialize()
@@ -223,7 +202,9 @@ class TestSemanticOutputs:
         device_session.select_layer(Layer.A)
         assert sum(isinstance(m, ProgramChange) for m in transport.sent) == 2
 
-    def test_encoder_ring_mode_restores_desired_display(self) -> None:
+    def test_encoder_ring_mode_restores_desired_display(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, transport = build_session()
         device_session.connect()
         device_session.initialize()
@@ -239,7 +220,9 @@ class TestSemanticOutputs:
         assert state.last_sent_mode is EncoderRingMode.PAN
         assert state.last_sent_display == EncoderRingDisplay.at(5)
 
-    def test_unsupported_semantic_value_raises_unsupported_operation(self) -> None:
+    def test_unsupported_semantic_value_raises_unsupported_operation(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         device_session.connect()
         device_session.initialize()
@@ -250,7 +233,9 @@ class TestSemanticOutputs:
 
 
 class TestEventConsumption:
-    def test_receive_returns_typed_physical_event(self) -> None:
+    def test_receive_returns_typed_physical_event(
+        self, build_session: SessionBuilder
+    ) -> None:
         transport = FakeTransport([NoteOn(1, 54, 127)])
         device_session, _ = build_session(transport)
         device_session.connect()
@@ -263,7 +248,9 @@ class TestEventConsumption:
 
 
 class TestFaderState:
-    def test_fader_state_is_read_only_snapshot(self) -> None:
+    def test_fader_state_is_read_only_snapshot(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         device_session.connect()
         device_session.initialize()
@@ -276,7 +263,9 @@ class TestFaderState:
 
 
 class TestSurfaceState:
-    def test_surface_state_snapshot_is_immutable(self) -> None:
+    def test_surface_state_snapshot_is_immutable(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         device_session.connect()
         device_session.initialize()
@@ -288,7 +277,9 @@ class TestSurfaceState:
         with pytest.raises(AttributeError):
             snapshot.status_leds[0].desired = StatusLedState.OFF  # type: ignore[misc]
 
-    def test_unsupported_state_inspection_uses_public_error(self) -> None:
+    def test_unsupported_state_inspection_uses_public_error(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
 
         with pytest.raises(UnsupportedOperationError):
@@ -307,14 +298,18 @@ class TestExceptions:
         assert issubclass(TransportConnectionError, TransportError)
         assert issubclass(TransportError, XTouchCompactError)
 
-    def test_application_code_can_catch_broad_base_exception(self) -> None:
+    def test_application_code_can_catch_broad_base_exception(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, _ = build_session()
         with pytest.raises(XTouchCompactError):
             device_session.initialize()
 
 
 class TestReconnect:
-    def test_reconnect_restores_desired_feedback_without_alsa_internals(self) -> None:
+    def test_reconnect_restores_desired_feedback_without_alsa_internals(
+        self, build_session: SessionBuilder
+    ) -> None:
         device_session, transport = build_session()
         device_session.connect()
         device_session.initialize()
@@ -328,7 +323,9 @@ class TestReconnect:
             is ButtonLedState.ON
         )
 
-    def test_connection_loss_surfaces_transport_connection_error(self) -> None:
+    def test_connection_loss_surfaces_transport_connection_error(
+        self, build_session: SessionBuilder
+    ) -> None:
         class FailingTransport(FakeTransport):
             def receive(self, timeout: float | None = None) -> object | None:
                 raise TransportConnectionError("lost")

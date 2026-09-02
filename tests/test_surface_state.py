@@ -1,8 +1,8 @@
 from dataclasses import FrozenInstanceError
-from pathlib import Path
 
 import pytest
 
+from tests.helpers import FakeTransport, SendFailure, SessionBuilder
 from xtouch_compact import (
     Button,
     ButtonLedState,
@@ -18,58 +18,13 @@ from xtouch_compact import (
     ProgramChange,
     StatusLedState,
     XTouchCompactSession,
-    load_device_specification,
 )
 
-SPEC_PATH = Path(__file__).parents[1] / "specs" / "xtouch-compact-midi.yaml"
 
-
-class SendFailure(RuntimeError):
-    pass
-
-
-class FakeTransport:
-    def __init__(self) -> None:
-        self.messages: list[ControlChange | NoteOn] = []
-        self.sent: list[object] = []
-        self.fail_next_send = False
-
-    def connect(self) -> object:
-        return object()
-
-    def receive(self, timeout: float | None = None) -> ControlChange | NoteOn | None:
-        return self.messages.pop(0) if self.messages else None
-
-    def send(self, message: object) -> None:
-        if self.fail_next_send:
-            self.fail_next_send = False
-            raise SendFailure("transport send failed")
-        self.sent.append(message)
-
-    def close(self) -> None:
-        pass
-
-
-@pytest.fixture
-def ready_session() -> tuple[XTouchCompactSession, FakeTransport]:
-    transport = FakeTransport()
-    session = XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
-    session.connect()
-    session.initialize()
-    transport.sent.clear()
-    return session, transport
-
-
-def test_initial_snapshot_covers_only_supported_feedback() -> None:
-    session = XTouchCompactSession(
-        FakeTransport(),
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-    )
+def test_initial_snapshot_covers_only_supported_feedback(
+    build_session: SessionBuilder,
+) -> None:
+    session, _ = build_session()
 
     snapshot = session.surface_state()
 
@@ -303,14 +258,10 @@ def test_layer_updates_track_state_and_reassert_on_repeated_selection(
     ]
 
 
-def test_startup_layer_assertion_is_recorded_and_never_deduplicated() -> None:
-    transport = FakeTransport()
-    session = XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-        startup_layer=Layer.B,
-    )
+def test_startup_layer_assertion_is_recorded_and_never_deduplicated(
+    build_session: SessionBuilder,
+) -> None:
+    session, transport = build_session(startup_layer=Layer.B)
 
     session.connect()
     session.initialize()

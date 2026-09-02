@@ -1,33 +1,24 @@
-from pathlib import Path
-
-import yaml
-
 import xtouch_compact
-
-REPOSITORY_ROOT = Path(__file__).parents[1]
-DEVICE_SPEC_PATH = REPOSITORY_ROOT / "specs" / "xtouch-compact-midi.yaml"
-
-
-def load_device_spec() -> dict[str, object]:
-    loaded = yaml.safe_load(DEVICE_SPEC_PATH.read_text(encoding="utf-8"))
-    assert isinstance(loaded, dict)
-    return loaded
 
 
 def test_package_imports() -> None:
     assert xtouch_compact.__version__ == "0.1.0"
 
 
-def test_device_spec_has_separate_physical_tx_and_rx_sections() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_has_separate_physical_tx_and_rx_sections(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
 
     assert "physical_layout" in device_spec
     assert "transmit" in device_spec
     assert "receive" in device_spec
 
 
-def test_device_spec_preserves_button_tx_rx_asymmetry() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_preserves_button_tx_rx_asymmetry(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
     transmit = device_spec["transmit"]
     receive = device_spec["receive"]
     assert isinstance(transmit, dict)
@@ -49,8 +40,10 @@ def test_device_spec_preserves_button_tx_rx_asymmetry() -> None:
     assert upper_top_1_rx["number"] == 0
 
 
-def test_device_spec_keeps_global_rx_channel_distinct_from_tx_channels() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_keeps_global_rx_channel_distinct_from_tx_channels(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
     transmit = device_spec["transmit"]
     receive = device_spec["receive"]
     assert isinstance(transmit, dict)
@@ -63,8 +56,10 @@ def test_device_spec_keeps_global_rx_channel_distinct_from_tx_channels() -> None
     assert receive["channel"] == "GLOBAL_CH"
 
 
-def test_device_spec_defines_documented_mode_and_preset_commands() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_defines_documented_mode_and_preset_commands(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
     receive = device_spec["receive"]
     assert isinstance(receive, dict)
 
@@ -93,8 +88,10 @@ def test_device_spec_defines_documented_mode_and_preset_commands() -> None:
     }
 
 
-def test_device_spec_records_characterized_tx_value_semantics() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_records_characterized_tx_value_semantics(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
     transmit = device_spec["transmit"]
     assert isinstance(transmit, dict)
 
@@ -134,8 +131,10 @@ def test_device_spec_records_characterized_tx_value_semantics() -> None:
             assert button["semantics_source"] == "hardware_observation"
 
 
-def test_device_spec_uses_characterized_button_led_rx_values() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_uses_characterized_button_led_rx_values(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
     receive = device_spec["receive"]
     assert isinstance(receive, dict)
 
@@ -164,8 +163,10 @@ def test_device_spec_uses_characterized_button_led_rx_values() -> None:
         assert button_led["values"] == effective_values
 
 
-def test_device_spec_records_group_fader_feedback_behavior() -> None:
-    device_spec = load_device_spec()
+def test_device_spec_records_group_fader_feedback_behavior(
+    device_spec_document: dict[str, object],
+) -> None:
+    device_spec = device_spec_document
     characterized_runtime = device_spec["characterized_runtime"]
     assert isinstance(characterized_runtime, dict)
 

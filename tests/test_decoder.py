@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from xtouch_compact import (
@@ -20,15 +18,7 @@ from xtouch_compact import (
     NoteOff,
     NoteOn,
     ProgramChange,
-    load_device_specification,
 )
-
-SPEC_PATH = Path(__file__).parents[1] / "specs" / "xtouch-compact-midi.yaml"
-
-
-@pytest.fixture(scope="module")
-def decoder() -> InboundDecoder:
-    return InboundDecoder(load_device_specification(SPEC_PATH))
 
 
 @pytest.mark.parametrize(

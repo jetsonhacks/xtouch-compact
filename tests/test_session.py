@@ -1,55 +1,22 @@
-from pathlib import Path
-
 import pytest
 
+from tests.helpers import FakeTransport, SessionBuilder
 from xtouch_compact import (
     ButtonPressed,
     ControlChange,
+    DeviceSpecification,
     Layer,
     NoteOn,
     ProgramChange,
     SessionState,
     XTouchCompactSession,
-    load_device_specification,
 )
 
-SPEC_PATH = Path(__file__).parents[1] / "specs" / "xtouch-compact-midi.yaml"
 
-
-class FakeTransport:
-    def __init__(self, messages: list[object] | None = None) -> None:
-        self.messages = list(messages or [])
-        self.connected = False
-        self.closed = False
-        self.sent: list[object] = []
-
-    def connect(self) -> object:
-        self.connected = True
-        return object()
-
-    def receive(self, timeout: float | None = None) -> object | None:
-        return self.messages.pop(0) if self.messages else None
-
-    def send(self, message: object) -> None:
-        self.sent.append(message)
-
-    def close(self) -> None:
-        self.closed = True
-        self.connected = False
-
-
-def session(transport: FakeTransport, layer: Layer = Layer.A) -> XTouchCompactSession:
-    return XTouchCompactSession(
-        transport,
-        load_device_specification(SPEC_PATH),
-        global_midi_channel=2,
-        startup_layer=layer,
-    )
-
-
-def test_post_connect_layer_initialization_is_explicit_session_policy() -> None:
-    transport = FakeTransport()
-    device_session = session(transport, Layer.B)
+def test_post_connect_layer_initialization_is_explicit_session_policy(
+    build_session: SessionBuilder,
+) -> None:
+    device_session, transport = build_session(startup_layer=Layer.B)
 
     device_session.connect()
     assert device_session.state is SessionState.STARTUP_LAYER_UNASSERTED
@@ -60,11 +27,10 @@ def test_post_connect_layer_initialization_is_explicit_session_policy() -> None:
     assert transport.sent == [ProgramChange(2, 1)]
 
 
-def test_receive_pipeline_decodes_message_and_preserves_raw_input() -> None:
-    transport = FakeTransport([NoteOn(1, 54, 127)])
-    device_session = session(transport)
-    device_session.connect()
-    device_session.initialize()
+def test_receive_pipeline_decodes_message_and_preserves_raw_input(
+    build_session: SessionBuilder,
+) -> None:
+    device_session, _ = build_session(FakeTransport([NoteOn(1, 54, 127)]), ready=True)
 
     received = device_session.receive_input()
 
@@ -73,12 +39,11 @@ def test_receive_pipeline_decodes_message_and_preserves_raw_input() -> None:
     assert isinstance(received.physical_event, ButtonPressed)
 
 
-def test_decoder_none_does_not_fail_receive_pipeline() -> None:
+def test_decoder_none_does_not_fail_receive_pipeline(
+    build_session: SessionBuilder,
+) -> None:
     raw = ControlChange(2, 1, 64)
-    transport = FakeTransport([raw])
-    device_session = session(transport)
-    device_session.connect()
-    device_session.initialize()
+    device_session, _ = build_session(FakeTransport([raw]), ready=True)
 
     received = device_session.receive_input()
 
@@ -87,12 +52,11 @@ def test_decoder_none_does_not_fail_receive_pipeline() -> None:
     assert received.physical_event is None
 
 
-def test_inbound_program_change_is_preserved_as_unsupported_device_input() -> None:
+def test_inbound_program_change_is_preserved_as_unsupported_device_input(
+    build_session: SessionBuilder,
+) -> None:
     raw = ProgramChange(2, 0)
-    transport = FakeTransport([raw])
-    device_session = session(transport)
-    device_session.connect()
-    device_session.initialize()
+    device_session, _ = build_session(FakeTransport([raw]), ready=True)
 
     received = device_session.receive_input()
 
@@ -101,9 +65,10 @@ def test_inbound_program_change_is_preserved_as_unsupported_device_input() -> No
     assert received.physical_event is None
 
 
-def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close() -> None:
-    transport = FakeTransport()
-    device_session = session(transport)
+def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close(
+    build_session: SessionBuilder,
+) -> None:
+    device_session, transport = build_session()
     device_session.connect()
 
     with pytest.raises(RuntimeError, match="unasserted"):
@@ -115,10 +80,12 @@ def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close() -> N
 
 
 @pytest.mark.parametrize("channel", [0, 17])
-def test_session_validates_global_midi_channel(channel: int) -> None:
+def test_session_validates_global_midi_channel(
+    specification: DeviceSpecification, channel: int
+) -> None:
     with pytest.raises(ValueError, match="midi_channel"):
         XTouchCompactSession(
             FakeTransport(),
-            load_device_specification(SPEC_PATH),
+            specification,
             global_midi_channel=channel,
         )
