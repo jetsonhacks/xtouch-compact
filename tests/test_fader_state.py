@@ -10,6 +10,7 @@ from xtouch_compact import (
     FaderPositionReported,
     FaderReleased,
     FaderTouched,
+    LifecycleError,
     XTouchCompactSession,
 )
 
@@ -167,7 +168,7 @@ def test_fader_request_before_ready_does_not_change_state(
 ) -> None:
     session, _ = build_session()
 
-    with pytest.raises(RuntimeError, match="unasserted"):
+    with pytest.raises(LifecycleError, match="disconnected"):
         session.set_fader(Fader.CHANNEL_1, 70)
 
     assert session.fader_state(Fader.CHANNEL_1).desired_value is None

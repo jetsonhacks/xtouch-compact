@@ -21,6 +21,10 @@ class LifecycleError(XTouchCompactError):
     """
 
 
+class SessionConfigurationError(XTouchCompactError, ValueError):
+    """Session construction received an invalid channel or startup layer."""
+
+
 class SpecificationError(XTouchCompactError, ValueError):
     """The device description is malformed, contradictory, or cannot load."""
 

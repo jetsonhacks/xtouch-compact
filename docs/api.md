@@ -24,6 +24,10 @@ constructed -> connect() -> STARTUP_LAYER_UNASSERTED
 
 `XTouchCompactSession(transport, specification, *, global_midi_channel, startup_layer=Layer.A)`
 
+`global_midi_channel` is the device Global MIDI Channel, 1–16.
+`startup_layer` must be `Layer.A` or `Layer.B`. Invalid values raise
+`SessionConfigurationError` at construction, before any ALSA I/O.
+
 | Method | Purpose |
 |---|---|
 | `connect()` | Open the transport. Does not yet publish semantic input. |
@@ -121,6 +125,7 @@ accepted. It is not confirmation that the hardware applied the command.
 ```text
 XTouchCompactError
 ├── LifecycleError
+├── SessionConfigurationError
 ├── SpecificationError
 ├── DiscoveryError
 │   ├── DeviceNotFoundError

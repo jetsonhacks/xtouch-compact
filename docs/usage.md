@@ -43,8 +43,9 @@ session = XTouchCompactSession(
 ```
 
 Construction does not open ALSA and does not require the device to be
-attached. `global_midi_channel` is required. `startup_layer` defaults to
-Layer A.
+attached. `global_midi_channel` is required and must be 1–16.
+`startup_layer` defaults to Layer A. Invalid values raise
+`SessionConfigurationError` immediately.
 
 `AlsaSequencerTransport` discovers the endpoint by client name
 `X-TOUCH COMPACT`. If several matching ports exist, pass `port_name` with a

@@ -27,6 +27,7 @@ from xtouch_compact import (
     LifecycleError,
     NoteOn,
     ProgramChange,
+    SessionConfigurationError,
     SessionState,
     StatusLedState,
     TransportConnectionError,
@@ -68,6 +69,7 @@ EXPECTED_PUBLIC_EXPORTS = {
     "PhysicalControlEvent",
     "XTouchCompactError",
     "LifecycleError",
+    "SessionConfigurationError",
     "DiscoveryError",
     "DeviceNotFoundError",
     "AmbiguousDeviceError",
@@ -109,9 +111,9 @@ class TestLifecycle:
     ) -> None:
         device_session, _ = build_session()
         assert device_session.state is SessionState.DISCONNECTED
-        with pytest.raises(LifecycleError):
+        with pytest.raises(LifecycleError, match="disconnected"):
             device_session.initialize()
-        with pytest.raises(LifecycleError):
+        with pytest.raises(LifecycleError, match="disconnected"):
             device_session.receive()
 
     def test_connect_then_initialize_reaches_ready(
@@ -172,6 +174,21 @@ class TestLifecycle:
         device_session, transport = build_session(InitializationFailureTransport())
 
         with pytest.raises(ValueError, match="initialization failed"), device_session:
+            pass
+
+        assert device_session.state is SessionState.DISCONNECTED
+        assert transport.connected is False
+
+    def test_context_manager_connect_interrupt_leaves_disconnected(
+        self, build_session: SessionBuilder
+    ) -> None:
+        class InterruptTransport(FakeTransport):
+            def connect(self) -> object:
+                raise KeyboardInterrupt
+
+        device_session, transport = build_session(InterruptTransport())
+
+        with pytest.raises(KeyboardInterrupt), device_session:
             pass
 
         assert device_session.state is SessionState.DISCONNECTED
@@ -291,6 +308,8 @@ class TestExceptions:
         self,
     ) -> None:
         assert issubclass(LifecycleError, XTouchCompactError)
+        assert issubclass(SessionConfigurationError, XTouchCompactError)
+        assert issubclass(SessionConfigurationError, ValueError)
         assert issubclass(UnsupportedOperationError, XTouchCompactError)
         assert issubclass(DeviceNotFoundError, DiscoveryError)
         assert issubclass(AmbiguousDeviceError, DiscoveryError)

@@ -12,6 +12,7 @@ from xtouch_compact import (
     Fader,
     FootControl,
     Layer,
+    LifecycleError,
     NoteOn,
     ProgramChange,
     StatusLedState,
@@ -234,7 +235,7 @@ def test_semantic_output_requires_ready_session(
 ) -> None:
     device, transport = build_session()
 
-    with pytest.raises(RuntimeError, match="unasserted"):
+    with pytest.raises(LifecycleError, match="disconnected"):
         operation(device)  # type: ignore[operator]
 
     assert transport.sent == []

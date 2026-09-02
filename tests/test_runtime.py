@@ -34,7 +34,7 @@ class RuntimeTransport:
         self.actions: list[tuple[str, object | None]] = []
         self.open_resources = 0
         self.fail_receive = False
-        self.send_failure: tuple[Callable[[object], bool], Exception] | None = None
+        self.send_failure: tuple[Callable[[object], bool], BaseException] | None = None
 
     def connect(self) -> object:
         result = self.connect_results.pop(0)
@@ -105,6 +105,42 @@ def test_device_absent_at_startup_leaves_session_retryable(
     session.initialize()
     assert session.state is SessionState.READY
     assert transport.endpoint == (31, 0)
+
+
+def test_keyboard_interrupt_during_connect_leaves_session_retryable(
+    specification: DeviceSpecification,
+) -> None:
+    transport = RuntimeTransport([KeyboardInterrupt(), (31, 0)])
+    session = runtime_session(specification, transport)
+
+    with pytest.raises(KeyboardInterrupt):
+        session.connect()
+
+    assert session.state is SessionState.DISCONNECTED
+    assert transport.open_resources == 0
+
+    session.connect()
+    session.initialize()
+    assert session.state is SessionState.READY
+    assert transport.endpoint == (31, 0)
+
+
+def test_keyboard_interrupt_during_reconnect_leaves_disconnected(
+    specification: DeviceSpecification,
+) -> None:
+    session, transport = ready_runtime_session(specification, [(24, 0), (31, 0)])
+    session.set_button_led(Button.PLAY, ButtonLedState.ON)
+    transport.send_failure = (
+        lambda message: isinstance(message, ProgramChange),
+        KeyboardInterrupt(),
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        session.reconnect()
+
+    assert session.state is SessionState.DISCONNECTED
+    assert transport.open_resources == 0
+    assert session.button_feedback_state(Button.PLAY).desired is ButtonLedState.ON
 
 
 def test_connection_loss_during_send_preserves_desired_feedback(

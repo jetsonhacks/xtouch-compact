@@ -6,8 +6,10 @@ from xtouch_compact import (
     ControlChange,
     DeviceSpecification,
     Layer,
+    LifecycleError,
     NoteOn,
     ProgramChange,
+    SessionConfigurationError,
     SessionState,
     XTouchCompactSession,
 )
@@ -71,7 +73,7 @@ def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close(
     device_session, transport = build_session()
     device_session.connect()
 
-    with pytest.raises(RuntimeError, match="unasserted"):
+    with pytest.raises(LifecycleError, match="unasserted"):
         device_session.receive()
 
     device_session.close()
@@ -79,13 +81,38 @@ def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close(
     assert transport.closed
 
 
-@pytest.mark.parametrize("channel", [0, 17])
+@pytest.mark.parametrize("channel", [0, 17, True])
 def test_session_validates_global_midi_channel(
-    specification: DeviceSpecification, channel: int
+    specification: DeviceSpecification, channel: object
 ) -> None:
-    with pytest.raises(ValueError, match="midi_channel"):
+    with pytest.raises(SessionConfigurationError, match="global_midi_channel"):
         XTouchCompactSession(
             FakeTransport(),
             specification,
-            global_midi_channel=channel,
+            global_midi_channel=channel,  # type: ignore[arg-type]
         )
+
+
+def test_session_validates_startup_layer(
+    specification: DeviceSpecification,
+) -> None:
+    with pytest.raises(SessionConfigurationError, match="startup_layer"):
+        XTouchCompactSession(
+            FakeTransport(),
+            specification,
+            global_midi_channel=2,
+            startup_layer="layer_a",  # type: ignore[arg-type]
+        )
+
+
+def test_ready_methods_report_disconnected_versus_unasserted(
+    build_session: SessionBuilder,
+) -> None:
+    device_session, _ = build_session()
+
+    with pytest.raises(LifecycleError, match="disconnected"):
+        device_session.receive()
+
+    device_session.connect()
+    with pytest.raises(LifecycleError, match="unasserted"):
+        device_session.receive()

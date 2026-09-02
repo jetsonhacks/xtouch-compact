@@ -8,7 +8,7 @@ from enum import Enum
 
 from .controls import Button, Encoder, Fader, FootControl, Layer
 from .decoder import InboundDecoder
-from .errors import LifecycleError
+from .errors import LifecycleError, SessionConfigurationError
 from .events import (
     FaderPositionReported,
     FaderReleased,
@@ -34,6 +34,21 @@ from .surface_state import (
     SurfaceStateSnapshot,
 )
 from .transport import MidiTransport, TransportConnectionError
+
+
+def _validate_session_construction(
+    global_midi_channel: int, startup_layer: Layer
+) -> None:
+    if isinstance(global_midi_channel, bool) or not isinstance(
+        global_midi_channel, int
+    ):
+        raise SessionConfigurationError("global_midi_channel must be an integer")
+    if not 1 <= global_midi_channel <= 16:
+        raise SessionConfigurationError(
+            "global_midi_channel must be from 1 through 16"
+        )
+    if not isinstance(startup_layer, Layer):
+        raise SessionConfigurationError("startup_layer must be a Layer")
 
 
 class SessionState(Enum):
@@ -71,6 +86,7 @@ class XTouchCompactSession:
         global_midi_channel: int,
         startup_layer: Layer = Layer.A,
     ) -> None:
+        _validate_session_construction(global_midi_channel, startup_layer)
         self._transport = transport
         self._specification = specification
         self._decoder = InboundDecoder(specification)
@@ -78,7 +94,6 @@ class XTouchCompactSession:
         self._feedback_encoder = SemanticFeedbackEncoder(
             specification, global_midi_channel=global_midi_channel
         )
-        self._feedback_encoder.layer(startup_layer)
         self._state = SessionState.DISCONNECTED
         self._faders = FaderStateController()
         assignable_buttons = tuple(
@@ -94,13 +109,17 @@ class XTouchCompactSession:
         return self._state
 
     def connect(self) -> None:
-        """Connect the transport without yet publishing semantic input."""
+        """Connect the transport without yet publishing semantic input.
+
+        A failure at any point, including ``BaseException`` such as
+        ``KeyboardInterrupt``, leaves the session ``DISCONNECTED``.
+        """
         if self._state is not SessionState.DISCONNECTED:
             raise LifecycleError("X-TOUCH session is already connected")
         self._state = SessionState.CONNECTING
         try:
             self._transport.connect()
-        except Exception:
+        except BaseException:
             self._disconnect_after_failure()
             raise
         self._surface.invalidate_last_sent()
@@ -108,6 +127,8 @@ class XTouchCompactSession:
 
     def initialize(self) -> None:
         """Send the configured preset-layer command and make input available."""
+        if self._state is SessionState.DISCONNECTED:
+            raise LifecycleError("X-TOUCH session is disconnected")
         if self._state is not SessionState.STARTUP_LAYER_UNASSERTED:
             raise LifecycleError("X-TOUCH session requires an unasserted connection")
         layer = self._surface.layer_state().desired or self._startup_layer
@@ -138,7 +159,7 @@ class XTouchCompactSession:
             self.connect()
             self.initialize()
             self.sync_feedback()
-        except Exception:
+        except BaseException:
             if self._state is not SessionState.DISCONNECTED:
                 self._disconnect_after_failure()
             raise
@@ -391,5 +412,10 @@ class XTouchCompactSession:
         self._faders.motor_command_sent(fader, value)
 
     def _require_ready(self) -> None:
-        if self._state is not SessionState.READY:
-            raise LifecycleError("X-TOUCH session startup layer is unasserted")
+        if self._state is SessionState.READY:
+            return
+        if self._state is SessionState.DISCONNECTED:
+            raise LifecycleError("X-TOUCH session is disconnected")
+        if self._state is SessionState.CONNECTING:
+            raise LifecycleError("X-TOUCH session is still connecting")
+        raise LifecycleError("X-TOUCH session startup layer is unasserted")
