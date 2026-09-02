@@ -1,5 +1,7 @@
 # xtouch-compact
 
+[![CI](https://github.com/jetsonhacks/xtouch-compact/actions/workflows/ci.yml/badge.svg)](https://github.com/jetsonhacks/xtouch-compact/actions/workflows/ci.yml)
+
 Python library for the Behringer X-TOUCH COMPACT on Linux ALSA Sequencer, in
 Standard MIDI mode.
 
@@ -43,6 +45,10 @@ package in editable mode. The lockfile pins the exact versions. Dev tools
 uv run pytest
 uv run ruff check .
 ```
+
+GitHub Actions runs those same checks on every push and pull request, on
+Python 3.10 through 3.13. The unit suite does not need a physical controller
+or `/dev/snd/seq`. Hardware examples in `examples/` remain manual.
 
 From another uv project, add this repository as a dependency:
 
