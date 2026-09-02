@@ -30,8 +30,8 @@ constructed -> connect() -> STARTUP_LAYER_UNASSERTED
 | `initialize()` | Assert the desired layer and enter `READY`. |
 | `reconnect()` | Rediscover, reconnect, assert layer, restore non-fader feedback. |
 | `close()` | Release transport resources. Idempotent. |
-| `receive(timeout=None)` | Next physical event, or `None`. |
-| `receive_input(timeout=None)` | Raw message plus optional event. |
+| `receive(timeout=None)` | Next physical event, or `None`. `None` blocks; `0` polls; a positive value waits that many seconds. |
+| `receive_input(timeout=None)` | Raw message plus optional event. Same timeout contract as `receive()`. |
 | `send(message)` | Send one raw typed MIDI message. Diagnostic. |
 | `set_fader(fader, value)` | Request a motor position, subject to touch ownership. |
 | `fader_state(fader)` | Immutable fader snapshot. |

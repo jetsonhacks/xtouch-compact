@@ -84,9 +84,11 @@ if isinstance(event, ButtonPressed):
     print(event.button, event.layer)
 ```
 
-`receive()` blocks until one decoded event arrives, or until `timeout`
-seconds elapse. `timeout=None` waits indefinitely. The call is synchronous.
-There is no callback API, background thread, or asyncio integration.
+`receive()` waits for one decoded event, or until `timeout` seconds
+elapse. `timeout=None` waits indefinitely. `timeout=0` polls and returns
+immediately. A positive value waits up to that many seconds. The call is
+synchronous. There is no callback API, background thread, or asyncio
+integration.
 
 `receive()` returns `None` on timeout and also when a MIDI message has no
 typed physical event (unknown address, or foot-control input). Use

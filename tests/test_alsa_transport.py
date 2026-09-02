@@ -1,3 +1,4 @@
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -21,6 +22,10 @@ from xtouch_compact import (
     alsa_event_from_midi,
     discover_endpoint,
     midi_from_alsa_event,
+)
+from xtouch_compact.alsa_transport import (
+    _POLL_TIMEOUT_SECONDS,
+    _event_input_timeout,
 )
 
 READ_WRITE_SUBSCRIPTIONS = 1 | 2 | 32 | 64
@@ -176,6 +181,7 @@ class FakeClient:
         self.fail_input = False
         self.fail_output = False
         self.fail_close = False
+        self.last_timeout: float | None = None
 
     def list_ports(self, **options: bool) -> list[SimpleNamespace]:
         assert options == {"input": True, "output": True}
@@ -186,9 +192,11 @@ class FakeClient:
         return self.port
 
     def event_input(self, timeout: float | None = None) -> object | None:
+        if timeout == 0:
+            raise AssertionError("timeout=0 would wait forever in alsa-midi")
+        self.last_timeout = timeout
         if self.fail_input:
             raise OSError("gone")
-        assert timeout == 0.25
         return self.incoming
 
     def event_output(self, event: object, *, port: object) -> None:
@@ -226,6 +234,7 @@ def test_transport_connect_send_receive_and_idempotent_close() -> None:
     assert client.events[0][1] is client.port
     assert client.drained == 1
     assert transport.receive(timeout=0.25) == ControlChange(2, 7, 0)
+    assert client.last_timeout == 0.25
 
     transport.close()
     transport.close()
@@ -331,3 +340,54 @@ def test_reconnect_rediscovers_changed_endpoint_identity() -> None:
     assert transport.connect().address == (24, 0)
     transport.close()
     assert transport.connect().address == (31, 0)
+
+
+def test_event_input_timeout_none_blocks() -> None:
+    assert _event_input_timeout(None) is None
+
+
+@pytest.mark.parametrize("timeout", [0, 0.0])
+def test_event_input_timeout_zero_is_a_positive_poll(timeout: float) -> None:
+    mapped = _event_input_timeout(timeout)
+    assert mapped == _POLL_TIMEOUT_SECONDS
+    assert mapped > 0
+
+
+def test_event_input_timeout_positive_is_preserved() -> None:
+    assert _event_input_timeout(0.25) == 0.25
+
+
+@pytest.mark.parametrize("timeout", [-1, True, "1"])
+def test_event_input_timeout_rejects_invalid_values(timeout: object) -> None:
+    with pytest.raises((TypeError, ValueError)):
+        _event_input_timeout(timeout)  # type: ignore[arg-type]
+
+
+def test_receive_timeout_zero_polls_without_blocking() -> None:
+    client = FakeClient("production-test")
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+    transport.connect()
+
+    started = time.monotonic()
+    assert transport.receive(timeout=0) is None
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.25
+    assert client.last_timeout == _POLL_TIMEOUT_SECONDS
+    assert client.last_timeout != 0
+
+
+def test_receive_timeout_zero_returns_a_queued_message() -> None:
+    client = FakeClient("production-test")
+    client.incoming = alsa_event("CONTROLLER", channel=1, param=7, value=0)
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+    transport.connect()
+
+    assert transport.receive(timeout=0) == ControlChange(2, 7, 0)
+    assert client.last_timeout == _POLL_TIMEOUT_SECONDS

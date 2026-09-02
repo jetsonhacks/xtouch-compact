@@ -14,6 +14,27 @@ from .transport import TransportConnectionError, TransportStateError
 
 DEFAULT_DEVICE_NAME = "X-TOUCH COMPACT"
 
+# alsa-midi's event_input uses ``if timeout:`` and treats 0 as wait-forever.
+# A positive duration that expires immediately is a non-blocking poll.
+_POLL_TIMEOUT_SECONDS = 1e-6
+
+
+def _event_input_timeout(timeout: float | None) -> float | None:
+    """Map this library's receive timeout onto alsa-midi's ``event_input``.
+
+    Public contract: ``None`` blocks, ``0`` polls, a positive value waits
+    that many seconds. Do not forward ``0`` to alsa-midi.
+    """
+    if timeout is None:
+        return None
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+        raise TypeError("timeout must be None or a number of seconds")
+    if timeout < 0:
+        raise ValueError("timeout must be None or a non-negative number of seconds")
+    if timeout == 0:
+        return _POLL_TIMEOUT_SECONDS
+    return float(timeout)
+
 
 def _disconnect_if_endpoint_exists(
     operation: Callable[[tuple[int, int]], None], address: tuple[int, int]
@@ -228,10 +249,16 @@ class AlsaSequencerTransport:
         return endpoint
 
     def receive(self, timeout: float | None = None) -> RawMidiMessage | None:
-        """Receive one event; timeouts and unsupported events return ``None``."""
+        """Receive one event; timeouts and unsupported events return ``None``.
+
+        ``timeout`` is seconds to wait. ``None`` blocks indefinitely. ``0``
+        polls and returns immediately. A positive value waits up to that
+        many seconds.
+        """
         client, _ = self._connected_resources()
+        event_timeout = _event_input_timeout(timeout)
         try:
-            event = client.event_input(timeout=timeout)
+            event = client.event_input(timeout=event_timeout)
         except Exception as error:
             raise TransportConnectionError("ALSA MIDI receive failed") from error
         return None if event is None else midi_from_alsa_event(event)

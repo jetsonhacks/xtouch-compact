@@ -146,13 +146,14 @@ class XTouchCompactSession:
     def receive(self, timeout: float | None = None) -> PhysicalControlEvent | None:
         """Block for one decoded physical event, or ``None`` if unavailable.
 
-        Requires ``READY``. ``timeout`` is seconds to wait; ``None`` blocks
-        indefinitely. Returns ``None`` when the timeout elapses with no
-        message, and also when a message arrives that has no physical-event
-        meaning (for example unmapped or diagnostic-only traffic) — use
-        :meth:`receive_input` to distinguish those cases. This is a
-        synchronous polling interface; there is no callback, thread, or
-        asyncio integration.
+        Requires ``READY``. ``timeout`` is seconds to wait. ``None`` blocks
+        indefinitely; ``0`` polls and returns immediately; a positive value
+        waits up to that many seconds. Returns ``None`` when the timeout
+        elapses with no message, and also when a message arrives that has
+        no physical-event meaning (for example unmapped or diagnostic-only
+        traffic) — use :meth:`receive_input` to distinguish those cases.
+        This is a synchronous polling interface; there is no callback,
+        thread, or asyncio integration.
         """
         received = self.receive_input(timeout=timeout)
         return None if received is None else received.physical_event
@@ -160,7 +161,8 @@ class XTouchCompactSession:
     def receive_input(self, timeout: float | None = None) -> ReceivedInput | None:
         """Receive one raw MIDI message alongside its decoded event.
 
-        Requires ``READY``. Returns ``None`` only when the timeout elapses
+        Requires ``READY``. ``timeout`` has the same meaning as
+        :meth:`receive`. Returns ``None`` only when the timeout elapses
         with no message. Otherwise returns a :class:`ReceivedInput` whose
         ``physical_event`` is ``None`` for messages with no supported
         physical-control meaning, while ``message`` always carries the raw
