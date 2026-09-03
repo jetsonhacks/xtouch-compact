@@ -256,6 +256,16 @@ def test_transport_classifies_client_creation_failure() -> None:
         transport.connect()
 
 
+def test_transport_names_missing_sequencer_device() -> None:
+    def fail_client_creation(name: str) -> object:
+        raise ALSAError("No such file or directory", -2)
+
+    transport = AlsaSequencerTransport(client_factory=fail_client_creation)
+
+    with pytest.raises(TransportConnectionError, match="/dev/snd/seq"):
+        transport.connect()
+
+
 def test_transport_preserves_device_discovery_failure() -> None:
     client = FakeClient("production-test")
     client.list_ports = lambda **options: []  # type: ignore[method-assign]

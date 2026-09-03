@@ -41,6 +41,30 @@ def _event_input_timeout(timeout: float | None) -> float | None:
     return float(timeout)
 
 
+def _connect_failure_message(error: BaseException) -> str:
+    """Classify a client-creation failure into an actionable message.
+
+    ``alsa-midi`` reports a missing ``/dev/snd/seq`` as an ``ALSAError``
+    (or, for some backends, an ``OSError``) carrying an ``ENOENT`` errno.
+    That specific case has one dominant real-world cause — a kernel built
+    without ALSA Sequencer support, notably stock Jetson kernels — so it
+    gets its own message instead of a generic wrapper.
+    """
+    errno_value = getattr(error, "errnum", None)
+    if errno_value is None:
+        errno_value = getattr(error, "errno", None)
+    if errno_value is not None and abs(errno_value) == ENOENT:
+        return (
+            "ALSA Sequencer device /dev/snd/seq is missing; the running "
+            "kernel was likely built without ALSA Sequencer support "
+            "(see docs/hardware.md#linux-and-alsa-sequencer)"
+        )
+    return (
+        f"ALSA MIDI connect failed: {error}; see "
+        "docs/hardware.md#linux-and-alsa-sequencer for prerequisites"
+    )
+
+
 def _disconnect_if_endpoint_exists(
     operation: Callable[[tuple[int, int]], None], address: tuple[int, int]
 ) -> None:
@@ -108,7 +132,9 @@ def discover_endpoint(
     if not matches:
         raise DeviceNotFoundError(
             f"no bidirectional ALSA Sequencer port found for client "
-            f"{device_name!r}{qualifier}"
+            f"{device_name!r}{qualifier}; run `aconnect -l` to check the "
+            "device is powered, in Standard MIDI mode, and enumerated "
+            "(see docs/hardware.md#linux-and-alsa-sequencer)"
         )
     if len(matches) > 1:
         identities = ", ".join(
@@ -116,7 +142,7 @@ def discover_endpoint(
         )
         raise AmbiguousDeviceError(
             f"multiple bidirectional ports match {device_name!r}: {identities}; "
-            "supply a port-name filter"
+            "supply a port-name filter (see docs/hardware.md#linux-and-alsa-sequencer)"
         )
     return matches[0]
 
@@ -216,7 +242,7 @@ class AlsaSequencerTransport:
                 client_factory = SequencerClient
             client = client_factory(self._client_name)
         except Exception as error:
-            raise TransportConnectionError("ALSA MIDI connect failed") from error
+            raise TransportConnectionError(_connect_failure_message(error)) from error
         local_port = None
         endpoint = None
         connected_from = False
@@ -246,7 +272,9 @@ class AlsaSequencerTransport:
             if isinstance(error, DiscoveryError):
                 raise
             if isinstance(error, Exception):
-                raise TransportConnectionError("ALSA MIDI connect failed") from error
+                raise TransportConnectionError(
+                    _connect_failure_message(error)
+                ) from error
             raise
         self._client = client
         self._local_port = local_port
