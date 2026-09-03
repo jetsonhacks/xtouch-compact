@@ -26,7 +26,11 @@ A small set of advanced/diagnostic transport types
 :class:`InboundDecoder`, the raw MIDI message types, and the ALSA
 conversion helpers) remain exported for diagnostics, opt-in hardware tools,
 and tests. Normal application code built only on the session API does not
-need them.
+need them. :class:`MidiTransport` is in this same advanced tier: it is the
+structural protocol ``XTouchCompactSession``'s ``transport`` argument must
+satisfy (``connect``/``receive``/``send``/``close``), needed only by code
+that supplies a non-ALSA transport in place of
+:class:`AlsaSequencerTransport`.
 """
 
 from .alsa_transport import (
@@ -84,6 +88,7 @@ from .surface_state import (
     StatusFeedbackState,
     SurfaceStateSnapshot,
 )
+from .transport import MidiTransport
 
 __version__ = "0.1.0"
 
@@ -142,6 +147,7 @@ __all__ = [
     "AlsaSequencerTransport",
     "ControlChange",
     "InboundDecoder",
+    "MidiTransport",
     "NoteOff",
     "NoteOn",
     "ProgramChange",

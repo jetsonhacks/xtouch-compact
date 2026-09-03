@@ -10,7 +10,6 @@ from ._specification_common import (
     Interaction,
     MidiAddress,
     MidiMessageType,
-    SpecificationError,
     TxBinding,
     _enum_member,
     _freeze,
@@ -19,6 +18,7 @@ from ._specification_common import (
     _message_type,
 )
 from .controls import Button, Encoder, Fader, FootControl, Layer, MappedControl
+from .errors import SpecificationError
 
 
 def _tx_control(group: str, physical_id: str, location: str) -> MappedControl:

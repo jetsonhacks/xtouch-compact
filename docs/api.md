@@ -157,7 +157,11 @@ Normal application code can ignore them.
 - `alsa_event_from_midi`, `midi_from_alsa_event`
 - `InboundDecoder`
 - `NoteOn`, `NoteOff`, `ControlChange`, `ProgramChange`, `RawMidiMessage`
+- `MidiTransport`
 
 `AlsaSequencerTransport` is the Linux transport used to construct a session.
+`MidiTransport` is the structural protocol it satisfies (`connect`,
+`receive`, `send`, `close`); implement it only to supply a non-ALSA
+transport in place of `AlsaSequencerTransport`.
 Discovery matches a unique client name with read, write, and both
 subscription capabilities.

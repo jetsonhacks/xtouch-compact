@@ -8,9 +8,14 @@ from dataclasses import dataclass
 from errno import ENOENT
 from typing import Any
 
-from .errors import AmbiguousDeviceError, DeviceNotFoundError, DiscoveryError
+from .errors import (
+    AmbiguousDeviceError,
+    DeviceNotFoundError,
+    DiscoveryError,
+    TransportConnectionError,
+    TransportStateError,
+)
 from .midi import ControlChange, NoteOff, NoteOn, ProgramChange, RawMidiMessage
-from .transport import TransportConnectionError, TransportStateError
 
 DEFAULT_DEVICE_NAME = "X-TOUCH COMPACT"
 

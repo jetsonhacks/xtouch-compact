@@ -17,7 +17,6 @@ __all__ = [
     "MidiAddress",
     "MidiMessageType",
     "RxBinding",
-    "SpecificationError",
     "TxBinding",
 ]
 

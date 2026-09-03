@@ -10,7 +10,6 @@ from ._specification_common import (
     MidiAddress,
     MidiMessageType,
     RxBinding,
-    SpecificationError,
     _enum_member,
     _freeze,
     _integer,
@@ -18,6 +17,7 @@ from ._specification_common import (
     _message_type,
 )
 from .controls import Button, Encoder, Fader, FootControl, MappedControl
+from .errors import SpecificationError
 
 
 def _rx_mapping(

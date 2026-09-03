@@ -14,7 +14,6 @@ from ._specification_common import (
     MidiAddress,
     MidiMessageType,
     RxBinding,
-    SpecificationError,
     TxBinding,
     _freeze,
     _mapping,
@@ -22,6 +21,7 @@ from ._specification_common import (
 from ._specification_rx import build_rx_index, validate_semantic_values
 from ._specification_tx import build_tx_index
 from .controls import Button, Encoder, Fader, MappedControl
+from .errors import SpecificationError
 
 __all__ = [
     "DEFAULT_SPEC_PATH",

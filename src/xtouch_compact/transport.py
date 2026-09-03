@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .errors import TransportConnectionError, TransportStateError
 from .midi import RawMidiMessage
 
-__all__ = ["MidiTransport", "TransportConnectionError", "TransportStateError"]
+__all__ = ["MidiTransport"]
 
 
 class MidiTransport(Protocol):

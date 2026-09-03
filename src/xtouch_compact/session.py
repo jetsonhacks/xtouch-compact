@@ -8,7 +8,7 @@ from enum import Enum
 
 from .controls import Button, Encoder, Fader, FootControl, Layer
 from .decoder import InboundDecoder
-from .errors import LifecycleError, SessionConfigurationError
+from .errors import LifecycleError, SessionConfigurationError, TransportConnectionError
 from .events import (
     FaderPositionReported,
     FaderReleased,
@@ -33,7 +33,7 @@ from .surface_state import (
     SurfaceStateController,
     SurfaceStateSnapshot,
 )
-from .transport import MidiTransport, TransportConnectionError
+from .transport import MidiTransport
 
 
 def _validate_session_construction(

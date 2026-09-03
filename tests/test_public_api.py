@@ -83,6 +83,7 @@ EXPECTED_PUBLIC_EXPORTS = {
     "AlsaSequencerTransport",
     "ControlChange",
     "InboundDecoder",
+    "MidiTransport",
     "NoteOff",
     "NoteOn",
     "ProgramChange",
