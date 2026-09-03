@@ -17,6 +17,7 @@ from xtouch_compact import (
     ButtonLedState,
     ButtonPressed,
     DeviceNotFoundError,
+    DeviceSpecification,
     DiscoveryError,
     Encoder,
     EncoderRingDisplay,
@@ -156,6 +157,20 @@ class TestLifecycle:
             assert entered is device_session
             assert entered.state is SessionState.READY
         assert device_session.state is SessionState.DISCONNECTED
+
+    def test_open_is_the_application_constructor(
+        self, specification: DeviceSpecification
+    ) -> None:
+        transport = FakeTransport()
+        session = xtouch_compact.XTouchCompactSession.open(
+            global_midi_channel=2,
+            transport=transport,
+            specification=specification,
+        )
+        assert session.state is SessionState.DISCONNECTED
+        with session:
+            assert session.state is SessionState.READY
+        assert session.state is SessionState.DISCONNECTED
 
     def test_context_manager_closes_on_exception(
         self, build_session: SessionBuilder

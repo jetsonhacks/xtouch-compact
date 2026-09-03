@@ -65,23 +65,13 @@ setups use 2).
 
 ```python
 from xtouch_compact import (
-    AlsaSequencerTransport,
     Button,
     ButtonLedState,
     Fader,
     XTouchCompactSession,
-    load_device_specification,
 )
 
-transport = AlsaSequencerTransport()
-specification = load_device_specification()
-session = XTouchCompactSession(
-    transport,
-    specification,
-    global_midi_channel=2,
-)
-
-with session:
+with XTouchCompactSession.open(global_midi_channel=2) as session:
     session.set_fader(Fader.CHANNEL_1, 96)
     session.set_button_led(Button.PLAY, ButtonLedState.ON)
     event = session.receive(timeout=1.0)
@@ -89,9 +79,9 @@ with session:
         print(event)
 ```
 
-`with session:` connects the ALSA endpoint, sends the startup layer
-assertion, and closes the session on exit. `connect()` and `initialize()`
-remain available as separate steps.
+`open()` builds the ALSA transport and device map. The `with` block
+connects, sends the startup layer assertion, and closes on exit.
+`connect()` and `initialize()` remain available as separate steps.
 
 Import from the `xtouch_compact` package root. See
 [docs/usage.md](docs/usage.md) for connection, input, and feedback, and

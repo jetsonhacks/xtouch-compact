@@ -21,7 +21,6 @@ import math
 import time
 
 from xtouch_compact import (
-    AlsaSequencerTransport,
     Button,
     ButtonLedState,
     Encoder,
@@ -29,7 +28,6 @@ from xtouch_compact import (
     Fader,
     XTouchCompactError,
     XTouchCompactSession,
-    load_device_specification,
 )
 
 _LAYER_BUTTONS = (Button.LAYER_A, Button.LAYER_B)
@@ -109,13 +107,8 @@ def main() -> int:
     if args.sine_seconds <= 0:
         parser.error("--sine-seconds must be positive")
 
-    session = XTouchCompactSession(
-        AlsaSequencerTransport(),
-        load_device_specification(),
-        global_midi_channel=args.channel,
-    )
     try:
-        with session:
+        with XTouchCompactSession.open(global_midi_channel=args.channel) as session:
             lamp_test_buttons(session, args.hold_seconds)
             lamp_test_rings(session, args.hold_seconds)
             sine_wave_faders(session, args.sine_seconds)

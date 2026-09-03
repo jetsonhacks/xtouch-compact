@@ -5,11 +5,7 @@ from __future__ import annotations
 
 import argparse
 
-from xtouch_compact import (
-    AlsaSequencerTransport,
-    XTouchCompactSession,
-    load_device_specification,
-)
+from xtouch_compact import XTouchCompactSession
 
 
 def main() -> None:
@@ -25,12 +21,7 @@ def main() -> None:
     if not 1 <= args.channel <= 16:
         parser.error("channel must be in the range 1 through 16")
 
-    session = XTouchCompactSession(
-        AlsaSequencerTransport(),
-        load_device_specification(),
-        global_midi_channel=args.channel,
-    )
-    with session:
+    with XTouchCompactSession.open(global_midi_channel=args.channel) as session:
         print("Listening. Press Ctrl-C to stop.")
         try:
             while True:

@@ -5,12 +5,7 @@ from __future__ import annotations
 
 import argparse
 
-from xtouch_compact import (
-    AlsaSequencerTransport,
-    Fader,
-    XTouchCompactSession,
-    load_device_specification,
-)
+from xtouch_compact import Fader, XTouchCompactSession
 
 
 def main() -> None:
@@ -35,12 +30,7 @@ def main() -> None:
     if not 0 <= args.value <= 127:
         parser.error("value must be in the range 0 through 127")
 
-    session = XTouchCompactSession(
-        AlsaSequencerTransport(),
-        load_device_specification(),
-        global_midi_channel=args.channel,
-    )
-    with session:
+    with XTouchCompactSession.open(global_midi_channel=args.channel) as session:
         for fader in Fader:
             session.set_fader(fader, args.value)
         input("Faders commanded. Press Enter to close.")

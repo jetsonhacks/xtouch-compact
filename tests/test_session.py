@@ -105,6 +105,58 @@ def test_session_validates_startup_layer(
         )
 
 
+def test_open_constructs_a_disconnected_session(
+    specification: DeviceSpecification,
+) -> None:
+    transport = FakeTransport()
+    session = XTouchCompactSession.open(
+        global_midi_channel=2,
+        transport=transport,
+        specification=specification,
+    )
+
+    assert session.state is SessionState.DISCONNECTED
+    assert not transport.connected
+
+
+def test_open_context_manager_connects_initializes_and_closes(
+    specification: DeviceSpecification,
+) -> None:
+    transport = FakeTransport()
+    session = XTouchCompactSession.open(
+        global_midi_channel=2,
+        startup_layer=Layer.B,
+        transport=transport,
+        specification=specification,
+    )
+
+    with session as entered:
+        assert entered is session
+        assert session.state is SessionState.READY
+        assert transport.sent == [ProgramChange(2, 1)]
+
+    assert session.state is SessionState.DISCONNECTED
+    assert transport.closed
+
+
+def test_open_defaults_to_alsa_transport_without_connecting() -> None:
+    session = XTouchCompactSession.open(global_midi_channel=2)
+
+    assert session.state is SessionState.DISCONNECTED
+
+
+def test_open_rejects_port_name_with_a_custom_transport(
+    specification: DeviceSpecification,
+) -> None:
+    with pytest.raises(SessionConfigurationError, match="port_name"):
+        XTouchCompactSession.open(
+            global_midi_channel=2,
+            transport=FakeTransport(),
+            specification=specification,
+            port_name="MIDI 1",
+        )
+
+
 def test_ready_methods_report_disconnected_versus_unasserted(
     build_session: SessionBuilder,
 ) -> None:

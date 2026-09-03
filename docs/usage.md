@@ -25,32 +25,39 @@ missing, see [hardware.md](hardware.md).
 ## Construct a Session
 
 ```python
-from xtouch_compact import (
-    AlsaSequencerTransport,
-    Layer,
-    XTouchCompactSession,
-    load_device_specification,
-)
+from xtouch_compact import Layer, XTouchCompactSession
 
-transport = AlsaSequencerTransport()
-specification = load_device_specification()
-session = XTouchCompactSession(
-    transport,
-    specification,
+session = XTouchCompactSession.open(
     global_midi_channel=2,
     startup_layer=Layer.A,
 )
 ```
 
-Construction does not open ALSA and does not require the device to be
-attached. `global_midi_channel` is required and must be 1–16.
-`startup_layer` defaults to Layer A. Invalid values raise
-`SessionConfigurationError` immediately.
+`open()` does not open ALSA and does not require the device to be attached.
+`global_midi_channel` is required and must be 1–16. `startup_layer` defaults
+to Layer A. Invalid values raise `SessionConfigurationError` immediately.
 
-`AlsaSequencerTransport` discovers the endpoint by client name
+The default transport discovers the endpoint by client name
 `X-TOUCH COMPACT`. If several matching ports exist, pass `port_name` with a
 unique fragment of the ALSA port name. Do not hard-code ALSA client or port
 numbers; those identities change across reconnects.
+
+The explicit constructor remains available when the application already
+has a transport or a loaded specification:
+
+```python
+from xtouch_compact import (
+    AlsaSequencerTransport,
+    XTouchCompactSession,
+    load_device_specification,
+)
+
+session = XTouchCompactSession(
+    AlsaSequencerTransport(),
+    load_device_specification(),
+    global_midi_channel=2,
+)
+```
 
 ## Connect and Initialize
 

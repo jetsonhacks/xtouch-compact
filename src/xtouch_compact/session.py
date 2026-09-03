@@ -73,7 +73,8 @@ class XTouchCompactSession:
     full lifecycle, reconnect, and feedback-synchronization contract.
     Also usable as a context manager: ``__enter__`` performs ``connect()``
     then ``initialize()`` and returns the ready session; ``__exit__`` always
-    calls ``close()``.
+    calls ``close()``. :meth:`open` constructs a session with the default
+    ALSA transport and bundled device map.
     """
 
     def __init__(
@@ -101,6 +102,48 @@ class XTouchCompactSession:
         )
         self._surface = SurfaceStateController(assignable_buttons)
         self._surface.request_layer(startup_layer)
+
+    @classmethod
+    def open(
+        cls,
+        *,
+        global_midi_channel: int,
+        startup_layer: Layer = Layer.A,
+        port_name: str | None = None,
+        specification: DeviceSpecification | None = None,
+        transport: MidiTransport | None = None,
+    ) -> XTouchCompactSession:
+        """Construct a session with the default ALSA transport and device map.
+
+        Does not connect and does not require the device to be attached.
+        Use as a context manager to connect, initialize, and close:
+
+        ``with XTouchCompactSession.open(global_midi_channel=2) as session:``
+
+        ``port_name`` is forwarded to :class:`AlsaSequencerTransport` when
+        ``transport`` is omitted. ``specification`` defaults to
+        :func:`load_device_specification`. Pass ``transport`` only for
+        tests or a non-ALSA backend; the explicit constructor remains
+        available for the same purpose.
+        """
+        if transport is None:
+            from .alsa_transport import AlsaSequencerTransport
+
+            transport = AlsaSequencerTransport(port_name=port_name)
+        elif port_name is not None:
+            raise SessionConfigurationError(
+                "port_name applies only when using the default ALSA transport"
+            )
+        if specification is None:
+            from .specification import load_device_specification
+
+            specification = load_device_specification()
+        return cls(
+            transport,
+            specification,
+            global_midi_channel=global_midi_channel,
+            startup_layer=startup_layer,
+        )
 
     @property
     def state(self) -> SessionState:

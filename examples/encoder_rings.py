@@ -6,12 +6,10 @@ from __future__ import annotations
 import argparse
 
 from xtouch_compact import (
-    AlsaSequencerTransport,
     Encoder,
     EncoderRingDisplay,
     EncoderRingMode,
     XTouchCompactSession,
-    load_device_specification,
 )
 
 
@@ -28,12 +26,7 @@ def main() -> None:
     if not 1 <= args.channel <= 16:
         parser.error("channel must be in the range 1 through 16")
 
-    session = XTouchCompactSession(
-        AlsaSequencerTransport(),
-        load_device_specification(),
-        global_midi_channel=args.channel,
-    )
-    with session:
+    with XTouchCompactSession.open(global_midi_channel=args.channel) as session:
         session.set_encoder_ring_mode(Encoder.CHANNEL_1, EncoderRingMode.FAN)
         session.set_encoder_ring_value(Encoder.CHANNEL_1, EncoderRingDisplay.at(7))
         input("Encoder 1 ring commanded. Press Enter to close.")

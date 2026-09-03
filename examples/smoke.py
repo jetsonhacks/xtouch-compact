@@ -18,7 +18,6 @@ import subprocess
 import sys
 
 from xtouch_compact import (
-    AlsaSequencerTransport,
     Button,
     ButtonLedState,
     Encoder,
@@ -27,7 +26,6 @@ from xtouch_compact import (
     Fader,
     XTouchCompactError,
     XTouchCompactSession,
-    load_device_specification,
 )
 
 RESULTS: list[tuple[str, str]] = []
@@ -177,11 +175,7 @@ def main() -> int:
 
     step_aconnect()
 
-    session = XTouchCompactSession(
-        AlsaSequencerTransport(),
-        load_device_specification(),
-        global_midi_channel=args.channel,
-    )
+    session = XTouchCompactSession.open(global_midi_channel=args.channel)
     try:
         session.connect()
         session.initialize()

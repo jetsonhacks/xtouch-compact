@@ -22,7 +22,15 @@ constructed -> connect() -> STARTUP_LAYER_UNASSERTED
             -> close() -> DISCONNECTED
 ```
 
+`XTouchCompactSession.open(*, global_midi_channel, startup_layer=Layer.A, port_name=None)`
+constructs a disconnected session with `AlsaSequencerTransport` and the
+bundled device map. It does not open ALSA. `port_name` is the optional
+ALSA port-name filter. Pass `transport` and/or `specification` to skip
+those defaults (tests and non-ALSA backends).
+
 `XTouchCompactSession(transport, specification, *, global_midi_channel, startup_layer=Layer.A)`
+is the explicit constructor when the caller already has a transport and
+specification.
 
 `global_midi_channel` is the device Global MIDI Channel, 1–16.
 `startup_layer` must be `Layer.A` or `Layer.B`. Invalid values raise
@@ -30,6 +38,7 @@ constructed -> connect() -> STARTUP_LAYER_UNASSERTED
 
 | Method | Purpose |
 |---|---|
+| `open(...)` | Class method: default ALSA transport and device map. Does not connect. |
 | `connect()` | Open the transport. Does not yet publish semantic input. |
 | `initialize()` | Assert the desired layer and enter `READY`. |
 | `reconnect()` | Rediscover, reconnect, assert layer, restore non-fader feedback. |

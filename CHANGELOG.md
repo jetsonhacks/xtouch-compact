@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `XTouchCompactSession.open()` constructs a session with the default ALSA
+  transport and bundled device map
+
 ## 0.1.0
 
 First public source release.
