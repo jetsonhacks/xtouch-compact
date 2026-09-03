@@ -152,7 +152,10 @@ Application code should not catch ALSA-specific exceptions.
 
 `load_device_specification(path=DEFAULT_SPEC_PATH)` loads and validates the
 YAML device map. The installed wheel includes the map as package data. A
-source checkout uses `specs/xtouch-compact-midi.yaml`.
+source checkout uses `specs/xtouch-compact-midi.yaml`. The human-readable
+map is [xtouch-compact-midi.md](xtouch-compact-midi.md); empirical
+value semantics are in
+[hardware-observations.md](hardware-observations.md).
 
 `DeviceSpecification` is the validated, immutable result. Pass it to
 `XTouchCompactSession`.

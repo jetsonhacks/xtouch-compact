@@ -107,6 +107,11 @@ interactive; watch the device while it runs.
 The rest of `examples/` is documented in
 [examples/README.md](examples/README.md).
 
+The extracted Standard MIDI map is
+[docs/xtouch-compact-midi.md](docs/xtouch-compact-midi.md). Dated hardware
+measurements that the session policies follow are in
+[docs/hardware-observations.md](docs/hardware-observations.md).
+
 ## Scope
 
 The library covers faders, encoders, assignable buttons, Layer A/B

@@ -38,7 +38,9 @@ paths separate.
 
 ## Known Device Behavior
 
-These limits are part of the supported contract.
+These limits are part of the supported contract. Dated measurement notes
+are in [hardware-observations.md](hardware-observations.md). The extracted
+Standard MIDI map is [xtouch-compact-midi.md](xtouch-compact-midi.md).
 
 **Faders.** Host commands use 0–127. Touch overrides the motor. The session
 suppresses motor commands while a fader is touched and sends a differing

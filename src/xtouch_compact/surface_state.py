@@ -65,7 +65,7 @@ class StatusFeedbackState:
 
 @dataclass(frozen=True, slots=True)
 class SurfaceStateSnapshot:
-    """Immutable snapshot of all feedback synchronized by M5."""
+    """Immutable snapshot of all host-controlled surface feedback."""
 
     buttons: tuple[ButtonFeedbackState, ...]
     encoders: tuple[EncoderFeedbackState, ...]
@@ -167,11 +167,11 @@ class SurfaceStateController:
     def invalidate_encoder_display(self, encoder: Encoder) -> None:
         """Mark one encoder's last-sent ring display unknown.
 
-        A physical rotation redraws the ring locally in every ring mode
-        (M7 Encoders and Rings), so a remote display the session already
-        believes it sent may no longer be visible. Call this once per
-        decoded physical rotation so the next matching-value display
-        request is not suppressed as a no-op duplicate.
+        A physical rotation redraws the ring locally in every ring mode,
+        so a remote display the session already believes it sent may no
+        longer be visible. Call this once per decoded physical rotation
+        so the next matching-value display request is not suppressed as a
+        no-op duplicate. See ``docs/hardware-observations.md``.
         """
         self._encoders[encoder] = replace(
             self.encoder_state(encoder), last_sent_display=None

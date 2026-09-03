@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- `XTouchCompactSession.open()` constructs a session with the default ALSA
-  transport and bundled device map
-
 ## 0.1.0
 
 First public source release.
@@ -16,3 +13,7 @@ First public source release.
   the foot-switch status LED
 - Fader touch ownership and surface-feedback synchronization
 - Explicit reconnect; motor positions are not restored automatically
+- `XTouchCompactSession.open()` constructs a session with the default ALSA
+  transport and bundled device map
+- Extracted Standard MIDI map and hardware-observation log
+- Session policies described without development-milestone shorthand

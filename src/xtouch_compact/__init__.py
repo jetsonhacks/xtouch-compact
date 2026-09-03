@@ -18,7 +18,7 @@ The exports fall into five categories:
 - semantic feedback and state types: :class:`ButtonLedState`,
   :class:`EncoderRingMode`, :class:`EncoderRingDisplay`,
   :class:`StatusLedState`, :class:`FaderState`, :class:`FaderOwner`, and the
-  M5 surface-feedback snapshot types;
+  surface-feedback snapshot types;
 - errors: the :class:`XTouchCompactError` hierarchy in ``errors``.
 
 A small set of advanced/diagnostic transport types

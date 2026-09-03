@@ -1,4 +1,4 @@
-"""Tests for the M8 stable application interface.
+"""Tests for the stable application interface.
 
 Library imports in this file come from the package root. Test doubles come
 from ``tests.helpers``. This file exists to guard the supported downstream

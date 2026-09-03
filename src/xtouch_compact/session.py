@@ -183,9 +183,9 @@ class XTouchCompactSession:
         ``reconnect()`` is a single synchronous transaction: it (1) performs
         fresh ALSA endpoint discovery, (2) establishes a fresh transport
         connection, (3) performs the mandatory startup layer assertion, and
-        (4) restores desired M5 surface feedback (button LEDs, encoder ring
+        (4) restores desired surface feedback (button LEDs, encoder ring
         modes and displays, layer, and the foot-switch status LED) through
-        :meth:`sync_feedback`. It resets M4 fader interaction state (desired
+        :meth:`sync_feedback`. It resets fader interaction state (desired
         and observed positions, touch, ownership, and motor-command history)
         but never repositions motorized faders automatically. Every stage
         must succeed before the session reports ``READY``; a failure at any
@@ -288,11 +288,12 @@ class XTouchCompactSession:
         """Select the display mode for one encoder LED ring.
 
         Mode and display are separate semantic concepts, but hardware
-        characterization (M7) found that a mode change redraws the ring
-        from the local encoder value and replaces any remotely assigned
+        characterization found that a mode change redraws the ring from
+        the local encoder value and replaces any remotely assigned
         display. After a successful mode change, this method therefore
         automatically resends the encoder's known desired display so
         callers do not have to manually restore it after every mode change.
+        See ``docs/hardware-observations.md``.
         """
         self._require_ready()
         message = self._feedback_encoder.encoder_ring_mode(encoder, mode)

@@ -1,8 +1,16 @@
+from pathlib import Path
+
 import xtouch_compact
 
 
 def test_package_imports() -> None:
     assert xtouch_compact.__version__ == "0.1.0"
+
+
+def test_cited_characterization_docs_exist() -> None:
+    root = Path(__file__).resolve().parents[1]
+    assert (root / "docs" / "hardware-observations.md").is_file()
+    assert (root / "docs" / "xtouch-compact-midi.md").is_file()
 
 
 def test_device_spec_has_separate_physical_tx_and_rx_sections(

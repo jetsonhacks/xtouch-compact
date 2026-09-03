@@ -180,9 +180,9 @@ def test_encoder_mode_change_restores_known_desired_display(
 def test_physical_rotation_invalidates_last_sent_display_for_reassertion(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
 ) -> None:
-    """A physical rotation redraws the ring locally in every ring mode (M7
-    Encoders and Rings), so a remote display the session believes it
-    already sent may no longer be visible. The next matching-value
+    """A physical rotation redraws the ring locally in every ring mode,
+    so a remote display the session believes it already sent may no
+    longer be visible. The next matching-value
     ``set_encoder_ring_value()`` call must not be suppressed as a no-op
     duplicate."""
     session, transport = ready_session
