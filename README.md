@@ -97,15 +97,25 @@ Import from the `xtouch_compact` package root. See
 [docs/usage.md](docs/usage.md) for connection, input, and feedback, and
 [docs/api.md](docs/api.md) for the supported types and methods.
 
-Examples in `examples/` need a connected controller and `--channel` set to
-the Global MIDI Channel:
+With a connected controller, run the interactive smoke test, then the
+visual demo. `--channel` is the Global MIDI Channel shown on the device:
 
 ```bash
-uv run python examples/monitor_controls.py --channel 2
-uv run python examples/move_faders.py --channel 2 --value 96
-uv run python examples/button_leds.py --channel 2
-uv run python examples/encoder_rings.py --channel 2
+uv run python examples/smoke.py --channel 2
+uv run python examples/demo.py --channel 2
 ```
+
+`examples/smoke.py` is the first-hour hardware check: Standard MIDI mode,
+channel, `aconnect`, fader, PLAY LED, encoder ring, and a receive loop,
+each with a pass/fail confirmation. See
+[docs/hardware.md](docs/hardware.md#first-hour-smoke-test).
+
+`examples/demo.py` lamp-tests every button LED, cycles every encoder ring,
+then sweeps the nine faders through a traveling sine wave. It is not
+interactive; watch the device while it runs.
+
+The rest of `examples/` is documented in
+[examples/README.md](examples/README.md).
 
 ## Scope
 

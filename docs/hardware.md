@@ -72,6 +72,51 @@ foot-switch LED desired state. It does not move motorized faders.
 pedal and foot-switch **input** is not published as typed events. Pedal range
 was not characterized.
 
+## First-Hour Smoke Test
+
+Before writing application code, confirm the box, the channel, and the
+kernel are right. This is a manual, on-device check — not part of CI.
+
+```bash
+uv run python examples/smoke.py --channel 2
+```
+
+`--channel` is required and has no default. The Global MIDI Channel is
+per-unit configuration read off the device's own display, not something the
+library can assume or detect; guessing wrong here sends every feedback
+command (fader, LED, ring) to a channel the device isn't listening on. The
+device silently drops or misinterprets most of that traffic rather than
+erroring, which reads as a broken button or ring instead of a wrong channel.
+
+The script walks through, in order:
+
+1. **Standard MIDI mode and channel.** Confirms the device is in Standard
+   MIDI mode (not Mackie Control) and that the Global MIDI Channel you pass
+   with `--channel` matches the number shown on the device.
+2. **`aconnect`.** Runs `aconnect -l` and checks for a client named
+   `X-TOUCH COMPACT`. A miss here usually means `/dev/snd/seq` is absent —
+   see [Linux and ALSA Sequencer](#linux-and-alsa-sequencer) above.
+3. **Reset.** Turns off every button LED and encoder ring before testing
+   anything. Prior manual runs of other `examples/` scripts leave the
+   device's LEDs and rings lit — there is no power-on reset between runs —
+   so without this step you can't tell which light a given step actually
+   commanded.
+4. **Fader.** Commands the CHANNEL_1 fader to 0, then to 127, and asks you
+   to confirm the motor moved.
+5. **PLAY LED.** Blinks the PLAY button LED and asks you to confirm. Because
+   of step 3, PLAY is the only lit button at this point, so any other LED
+   lighting is diagnostic, not ambiguous.
+6. **Encoder ring.** Sets encoder 1 to fan mode at mid-scale and asks you
+   to confirm the ring lit correctly, then turns it back off.
+7. **Receive loop.** Prints decoded events while you move the fader, turn
+   encoder 1, and press PLAY, then asks whether all three produced events.
+
+The script turns everything back off on exit, including after a failure.
+Each stage records a pass/fail/skip; a summary prints at the end. A clean
+run through all stages is first-hour proof that the physical device, the
+configured channel, and the host kernel's ALSA Sequencer support are all
+correct before you build anything on top.
+
 ## What This Library Does Not Drive
 
 - Mackie Control / MCU

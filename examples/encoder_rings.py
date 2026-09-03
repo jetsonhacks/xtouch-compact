@@ -35,7 +35,7 @@ def main() -> None:
     )
     with session:
         session.set_encoder_ring_mode(Encoder.CHANNEL_1, EncoderRingMode.FAN)
-        session.set_encoder_ring_value(Encoder.CHANNEL_1, EncoderRingDisplay.at(64))
+        session.set_encoder_ring_value(Encoder.CHANNEL_1, EncoderRingDisplay.at(7))
         input("Encoder 1 ring commanded. Press Enter to close.")
 
 
