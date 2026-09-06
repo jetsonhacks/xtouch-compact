@@ -1,10 +1,9 @@
-"""State and ownership policy for the nine motorized faders."""
+"""State and ownership rules for the nine motorized faders."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import Enum
-from typing import Protocol
 
 from .controls import Fader
 from .events import FaderPositionReported, FaderReleased, FaderTouched
@@ -46,75 +45,59 @@ class FaderTransition:
     command_value: int | None = None
 
 
-class DefaultFaderOwnershipPolicy:
+def _application_requested(state: FaderState, value: int) -> FaderTransition:
     """Give touched faders to the human and reconcile them on release."""
-
-    def application_requested(self, state: FaderState, value: int) -> FaderTransition:
-        updated = replace(state, desired_value=value)
-        if state.owner is FaderOwner.HUMAN:
-            return FaderTransition(updated)
-        if state.observation_is_current:
-            if state.observed_value == value:
-                return FaderTransition(updated)
-            return FaderTransition(updated, value)
-        if state.last_commanded_value == value:
+    updated = replace(state, desired_value=value)
+    if state.owner is FaderOwner.HUMAN:
+        return FaderTransition(updated)
+    if state.observation_is_current:
+        if state.observed_value == value:
             return FaderTransition(updated)
         return FaderTransition(updated, value)
+    if state.last_commanded_value == value:
+        return FaderTransition(updated)
+    return FaderTransition(updated, value)
 
-    def position_reported(self, state: FaderState, value: int) -> FaderTransition:
-        return FaderTransition(
-            replace(state, observed_value=value, observation_is_current=True)
-        )
 
-    def touched(self, state: FaderState) -> FaderTransition:
-        return FaderTransition(replace(state, touched=True, owner=FaderOwner.HUMAN))
+def _position_reported(state: FaderState, value: int) -> FaderTransition:
+    return FaderTransition(
+        replace(state, observed_value=value, observation_is_current=True)
+    )
 
-    def released(self, state: FaderState) -> FaderTransition:
-        was_touched = state.touched
-        updated = replace(
-            state,
-            touched=False,
-            owner=FaderOwner.APPLICATION,
-        )
-        desired = updated.desired_value
-        if not was_touched or desired is None:
+
+def _touched(state: FaderState) -> FaderTransition:
+    return FaderTransition(replace(state, touched=True, owner=FaderOwner.HUMAN))
+
+
+def _released(state: FaderState) -> FaderTransition:
+    was_touched = state.touched
+    updated = replace(
+        state,
+        touched=False,
+        owner=FaderOwner.APPLICATION,
+    )
+    desired = updated.desired_value
+    if not was_touched or desired is None:
+        return FaderTransition(updated)
+    if updated.observation_is_current:
+        if desired == updated.observed_value:
             return FaderTransition(updated)
-        if updated.observation_is_current:
-            if desired == updated.observed_value:
-                return FaderTransition(updated)
-        elif desired == updated.last_commanded_value:
-            return FaderTransition(updated)
-        return FaderTransition(updated, desired)
-
-
-class FaderOwnershipPolicy(Protocol):
-    """Transition contract used by the fader state controller."""
-
-    def application_requested(
-        self, state: FaderState, value: int
-    ) -> FaderTransition: ...
-
-    def position_reported(self, state: FaderState, value: int) -> FaderTransition: ...
-
-    def touched(self, state: FaderState) -> FaderTransition: ...
-
-    def released(self, state: FaderState) -> FaderTransition: ...
+    elif desired == updated.last_commanded_value:
+        return FaderTransition(updated)
+    return FaderTransition(updated, desired)
 
 
 class FaderStateController:
-    """Store independent fader states and apply one ownership policy."""
+    """Store independent fader states and apply the ownership rules."""
 
-    def __init__(self, policy: FaderOwnershipPolicy | None = None) -> None:
-        self._policy = DefaultFaderOwnershipPolicy() if policy is None else policy
+    def __init__(self) -> None:
         self.reset()
 
     def state(self, fader: Fader) -> FaderState:
         return self._states[fader]
 
     def application_requested(self, fader: Fader, value: int) -> int | None:
-        return self._apply(
-            fader, self._policy.application_requested(self._states[fader], value)
-        )
+        return self._apply(fader, _application_requested(self._states[fader], value))
 
     def physical_event(
         self,
@@ -122,11 +105,11 @@ class FaderStateController:
     ) -> int | None:
         state = self._states[event.fader]
         if isinstance(event, FaderPositionReported):
-            transition = self._policy.position_reported(state, event.value)
+            transition = _position_reported(state, event.value)
         elif isinstance(event, FaderTouched):
-            transition = self._policy.touched(state)
+            transition = _touched(state)
         else:
-            transition = self._policy.released(state)
+            transition = _released(state)
         return self._apply(event.fader, transition)
 
     def motor_command_sent(self, fader: Fader, value: int) -> None:
