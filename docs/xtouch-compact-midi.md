@@ -45,7 +45,7 @@ The guide describes 9 touch-sensitive motorized 100 mm faders, 16 push encoders 
 | `fader_8` | CC 8 | CC 108 |
 | `master_fader` | CC 9 | CC 109 |
 
-Fader position uses values **0–127**. The MIDI map identifies touch as CC but does not state the touch/release values; those should be measured.
+Fader position uses values **0–127**. The guide identifies touch as a CC address but does not state the touch/release values. Hardware characterization measured touch as value 127 and release as value 0; see [hardware-observations.md](hardware-observations.md#reported-2026-08-08-jetson-agx-thor-characterization).
 
 ### Encoders
 

@@ -61,14 +61,34 @@ startup Program Change is sent. That is why `initialize()` is mandatory.
 
 **Transport-button LEDs.** Pressing one of the six right-side transport
 buttons (rewind through play) can redraw the group's host-assigned LEDs
-locally. The session invalidates last-sent LED state for the whole group on
-a decoded press so equal desired states can be sent again. Other button
-groups are not given that treatment.
+locally, replacing the host's last-sent state for other buttons in the same
+group without emitting any host-visible event for that replacement — see
+[Observed 2026-08-11: Transport Button Press Replaces Host LED
+State](hardware-observations.md#observed-2026-08-11-transport-button-press-replaces-host-led-state).
+Because the host has no way to learn that another button's LED changed, the
+session cannot trust its own record of what is currently lit for the whole
+group once any member of it is pressed. It invalidates last-sent LED state
+for the whole group on a decoded press (the `_TRANSPORT_BUTTONS` branch of
+`SurfaceStateController.physical_event` in
+[`surface_state.py`](../src/xtouch_compact/surface_state.py), exercised by
+`test_transport_button_press_invalidates_group_for_led_reassertion` in
+[`test_surface_state.py`](../tests/test_surface_state.py)) so that an equal
+desired state, which would otherwise be suppressed as a no-op duplicate, is
+sent again. This is a conservative policy generalized from one representative
+button in the group, not an independently measured result for every
+transport button; other button groups are not given that treatment because
+no equivalent observation exists for them.
 
-**Disconnect.** A timed `receive()` returning `None` is not proof that the
-USB device is gone. After unplug or power-off, call `reconnect()` once the
-controller is enumerated again. Reconnect restores button, ring, layer, and
-foot-switch LED desired state. It does not move motorized faders.
+**Disconnect.** A timed `receive()` returning `None` means no supported
+event arrived in that interval — it is not proof that the USB device is
+gone, and the library does not poll or ping the device to check. Liveness
+and device-loss policy are the application's responsibility; the library
+does not provide a safety-rated presence detector, watchdog, or
+emergency-stop mechanism. After unplug or power-off, call `reconnect()` once
+you have established through some other means (a raised
+`TransportConnectionError`, a hotplug notification, an operator action) that
+the controller is enumerated again. Reconnect restores button, ring, layer,
+and foot-switch LED desired state. It does not move motorized faders.
 
 **Foot controls.** The foot-switch status LED is host-controllable. Expression
 pedal and foot-switch **input** is not published as typed events. Pedal range

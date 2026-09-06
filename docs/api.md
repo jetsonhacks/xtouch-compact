@@ -44,8 +44,8 @@ factory profile, represented in `xtouch_compact.device_map`.
 | `initialize()` | Assert the desired layer and enter `READY`. |
 | `reconnect()` | Rediscover, reconnect, assert layer, restore non-fader feedback. |
 | `close()` | Release transport resources. Idempotent. |
-| `receive(timeout=None)` | Next physical event, or `None`. `None` blocks; `0` polls; a positive value waits that many seconds. |
-| `receive_input(timeout=None)` | Raw message plus optional event. Same timeout contract as `receive()`. |
+| `receive(timeout=None)` | Next physical event, or `None`. `None` blocks; `0` polls; a positive value waits that many seconds. Also returns `None` when a received message does not decode into a typed event. |
+| `receive_input(timeout=None)` | Raw message plus optional event. Same timeout contract as `receive()`. Not a lossless capture: the ALSA transport itself returns `None` for an ALSA event type it does not convert, indistinguishable here from a timeout. |
 | `send(message)` | Send one raw typed MIDI message. Diagnostic. |
 | `set_fader(fader, value)` | Request a motor position, subject to touch ownership. |
 | `fader_state(fader)` | Immutable fader snapshot. |

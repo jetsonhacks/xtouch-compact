@@ -96,15 +96,26 @@ immediately. A positive value waits up to that many seconds. The call is
 synchronous. There is no callback API, background thread, or asyncio
 integration.
 
-`receive()` returns `None` on timeout and also when a MIDI message has no
-typed physical event (unknown address, or foot-control input). Use
-`receive_input()` when diagnostics need the raw message:
+`receive()` returns `None` on timeout and also when a received MIDI message
+does not decode into one of the typed physical events below (unknown
+address, or foot-control input). Use `receive_input()` when diagnostics need
+the raw message:
 
 ```python
 received = session.receive_input(timeout=0.25)
 if received is not None:
     print(received.message, received.physical_event)
 ```
+
+`receive_input()` is useful for correlating a raw MIDI message with the
+application-level event it decoded to (or `None` if it decoded to none).
+It is not a lossless capture mechanism: the ALSA transport itself returns
+`None` for an ALSA sequencer event type it does not convert to a MIDI
+message (see `midi_from_alsa_event` in
+[`alsa_transport.py`](../src/xtouch_compact/alsa_transport.py)), and that
+case is indistinguishable from an ordinary timeout at the session level.
+Anything that needs every ALSA event, decodable or not, needs a lower-level
+ALSA capture tool instead of this API.
 
 Typed events cover fader position, fader touch and release, encoder turn and
 push, and button press and release. Each event carries the physical identity,
@@ -176,7 +187,20 @@ not restore motor positions.
 A live ALSA send or receive failure raises `TransportConnectionError`, moves
 the session to `DISCONNECTED`, and leaves desired surface feedback in place
 for a later `reconnect()`. A receive timeout is not proof that the device is
-gone. Call `reconnect()` after you know the controller has returned.
+gone; it means no supported event arrived during that interval, which is a
+much weaker claim than "the device is disconnected." The library does not
+poll or ping the device to establish liveness on its own, so a receive
+timeout is not a presence check, a watchdog, or an emergency-stop signal.
+Call `reconnect()` after you have established, by whatever means your
+application uses (a raised `TransportConnectionError`, a USB hotplug
+notification, an operator action), that the controller has actually
+returned.
+
+Deciding what device loss or an unresponsive controller means for the rest
+of an application — including any robot or motion-control behavior gated on
+it — is the application's responsibility. The library provides transport and
+session state (`SessionState`, the exceptions above); it does not provide a
+safety-rated enable/stop mechanism.
 
 ## Close
 
