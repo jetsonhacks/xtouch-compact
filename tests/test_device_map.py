@@ -12,6 +12,8 @@ silently.
 
 from __future__ import annotations
 
+import pytest
+
 from xtouch_compact import Button, Encoder, Fader, FootControl, Layer
 from xtouch_compact.device_map import (
     ASSIGNABLE_BUTTONS,
@@ -30,6 +32,11 @@ from xtouch_compact.device_map import (
     Interaction,
     MidiAddress,
     MidiMessageType,
+    RxBinding,
+    TxBinding,
+    _build_rx_control_index,
+    _build_rx_index,
+    _build_tx_index,
 )
 
 
@@ -164,6 +171,54 @@ class TestAddressUniqueness:
         keys = [(binding.control, binding.operation) for binding in RX_BINDINGS]
         assert len(keys) == len(set(keys))
         assert len(RX_CONTROL_INDEX) == len(keys)
+
+
+class TestAmbiguityGuards:
+    """The index builders raise at construction time on a duplicate address
+    or control/operation key, rather than silently letting one entry shadow
+    another. These are exercised directly, against crafted duplicates, since
+    the real tables (already proven unique above) never trigger them."""
+
+    def test_build_tx_index_rejects_two_bindings_on_same_layer_and_address(
+        self,
+    ) -> None:
+        address = MidiAddress(MidiMessageType.CONTROL_CHANGE, 1, 1)
+        duplicate = (
+            TxBinding(Layer.A, 1, address, Fader.CHANNEL_1, Interaction.FADER_POSITION),
+            TxBinding(Layer.A, 1, address, Fader.CHANNEL_2, Interaction.FADER_POSITION),
+        )
+
+        with pytest.raises(AssertionError, match="ambiguous TX address"):
+            _build_tx_index(duplicate)
+
+    def test_build_rx_index_rejects_two_bindings_on_the_same_address(self) -> None:
+        address = MidiAddress(MidiMessageType.CONTROL_CHANGE, 1)
+        duplicate = (
+            RxBinding(address, Fader.CHANNEL_1, "position"),
+            RxBinding(address, Fader.CHANNEL_2, "position"),
+        )
+
+        with pytest.raises(AssertionError, match="duplicate RX address"):
+            _build_rx_index(duplicate)
+
+    def test_build_rx_control_index_rejects_two_bindings_for_same_control_operation(
+        self,
+    ) -> None:
+        duplicate = (
+            RxBinding(
+                MidiAddress(MidiMessageType.CONTROL_CHANGE, 1),
+                Fader.CHANNEL_1,
+                "position",
+            ),
+            RxBinding(
+                MidiAddress(MidiMessageType.CONTROL_CHANGE, 2),
+                Fader.CHANNEL_1,
+                "position",
+            ),
+        )
+
+        with pytest.raises(AssertionError, match="duplicate RX control operation"):
+            _build_rx_control_index(duplicate)
 
 
 class TestLiteralProtocolVectors:

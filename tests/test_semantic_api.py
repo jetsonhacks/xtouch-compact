@@ -138,25 +138,27 @@ def test_every_encoder_supports_ring_display_output(
 
 
 @pytest.mark.parametrize(
-    ("display", "encoded"),
+    ("factory_name", "factory_args", "encoded"),
     [
-        (EncoderRingDisplay.off(), 0),
-        (EncoderRingDisplay.at(1), 1),
-        (EncoderRingDisplay.at(7), 7),
-        (EncoderRingDisplay.at(13), 13),
-        (EncoderRingDisplay.blinking_at(1), 14),
-        (EncoderRingDisplay.blinking_at(13), 26),
-        (EncoderRingDisplay.all_on(), 27),
-        (EncoderRingDisplay.all_blinking(), 28),
+        ("off", (), 0),
+        ("at", (1,), 1),
+        ("at", (7,), 7),
+        ("at", (13,), 13),
+        ("blinking_at", (1,), 14),
+        ("blinking_at", (13,), 26),
+        ("all_on", (), 27),
+        ("all_blinking", (), 28),
     ],
 )
 def test_encoder_ring_display_encodings_come_from_device_map(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
-    display: EncoderRingDisplay,
+    factory_name: str,
+    factory_args: tuple[int, ...],
     encoded: int,
 ) -> None:
     device, transport = ready_session
     binding = RX_CONTROL_INDEX[(Encoder.CHANNEL_1, "ring_value")]
+    display = getattr(EncoderRingDisplay, factory_name)(*factory_args)
 
     device.set_encoder_ring_value(Encoder.CHANNEL_1, display)
 

@@ -204,21 +204,23 @@ def test_encoder_modes_track_state_and_deduplicate(
 
 
 @pytest.mark.parametrize(
-    "display",
+    ("factory_name", "factory_args"),
     [
-        EncoderRingDisplay.off(),
-        EncoderRingDisplay.at(1),
-        EncoderRingDisplay.at(7),
-        EncoderRingDisplay.blinking_at(13),
-        EncoderRingDisplay.all_on(),
-        EncoderRingDisplay.all_blinking(),
+        ("off", ()),
+        ("at", (1,)),
+        ("at", (7,)),
+        ("blinking_at", (13,)),
+        ("all_on", ()),
+        ("all_blinking", ()),
     ],
 )
 def test_encoder_displays_track_state_and_deduplicate(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
-    display: EncoderRingDisplay,
+    factory_name: str,
+    factory_args: tuple[int, ...],
 ) -> None:
     session, transport = ready_session
+    display = getattr(EncoderRingDisplay, factory_name)(*factory_args)
 
     session.set_encoder_ring_value(Encoder.POSITION_16, display)
     session.set_encoder_ring_value(Encoder.POSITION_16, display)
@@ -493,7 +495,7 @@ def test_public_snapshots_are_immutable(
     assert session.layer_feedback_state().desired is Layer.A
 
 
-def test_sync_feedback_leaves_fader_ownership_with_m4(
+def test_sync_feedback_does_not_reassert_a_touched_fader(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
 ) -> None:
     session, transport = ready_session

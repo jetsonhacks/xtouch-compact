@@ -4,20 +4,22 @@ from xtouch_compact import ControlChange, NoteOff, NoteOn, ProgramChange
 
 
 @pytest.mark.parametrize(
-    "message",
+    ("message_type", "arguments"),
     [
-        NoteOn(1, 0, 0),
-        NoteOn(16, 127, 127),
-        NoteOff(1, 0, 0),
-        NoteOff(16, 127, 127),
-        ControlChange(1, 0, 0),
-        ControlChange(16, 127, 127),
-        ProgramChange(1, 0),
-        ProgramChange(16, 127),
+        (NoteOn, (1, 0, 0)),
+        (NoteOn, (16, 127, 127)),
+        (NoteOff, (1, 0, 0)),
+        (NoteOff, (16, 127, 127)),
+        (ControlChange, (1, 0, 0)),
+        (ControlChange, (16, 127, 127)),
+        (ProgramChange, (1, 0)),
+        (ProgramChange, (16, 127)),
     ],
 )
-def test_raw_midi_messages_accept_boundary_values(message: object) -> None:
-    assert message is not None
+def test_raw_midi_messages_accept_boundary_values(
+    message_type: type, arguments: tuple[int, ...]
+) -> None:
+    assert message_type(*arguments) is not None
 
 
 @pytest.mark.parametrize(
