@@ -3,8 +3,10 @@
 This log records empirical behavior separately from manufacturer claims.
 The supported library contract is summarized in [hardware.md](hardware.md).
 The human-readable Standard MIDI map is
-[xtouch-compact-midi.md](xtouch-compact-midi.md); the machine-readable form
-is `specs/xtouch-compact-midi.yaml`.
+[xtouch-compact-midi.md](xtouch-compact-midi.md). The historical machine-readable
+artifact is `specs/xtouch-compact-midi.yaml` (see
+[specs/README.md](../specs/README.md)); the operational runtime map is
+[`device_map.py`](../src/xtouch_compact/device_map.py).
 
 Use one dated section per session. Record the device mode and preset, Linux
 host, connection tool or program, exact MIDI bytes or structured message,

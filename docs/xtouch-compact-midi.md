@@ -328,9 +328,13 @@ be sent even when cached host state already names that layer. See
 [hardware-observations.md](hardware-observations.md) for the measured
 procedures and their limits.
 
-## Canonical machine-readable form
+## Runtime device map and historical artifact
 
-See [`../specs/xtouch-compact-midi.yaml`](../specs/xtouch-compact-midi.yaml).
-It contains explicit entries for every fader, encoder, and illuminated
-button. The Python loader validates that document and builds the TX and RX
-indexes used at runtime.
+The fixed Python map in
+[`device_map.py`](../src/xtouch_compact/device_map.py) is the sole operational
+source of truth. It defines the factory mappings and builds the validated
+TX and RX indexes used at runtime.
+
+[`xtouch-compact-midi.yaml`](../specs/xtouch-compact-midi.yaml) preserves the
+historical characterization evidence. It is not loaded at runtime or
+packaged in the wheel; see [`specs/README.md`](../specs/README.md).
