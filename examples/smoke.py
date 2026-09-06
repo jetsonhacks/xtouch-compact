@@ -66,28 +66,30 @@ def reset_surface(session: XTouchCompactSession) -> None:
         session.set_encoder_ring_value(encoder, EncoderRingDisplay.off())
 
 
-def best_effort_reset(session: XTouchCompactSession) -> None:
-    """Turn LEDs and rings off, tolerating a lost or unresponsive device.
+def cleanup(session: XTouchCompactSession, primary_error: BaseException | None) -> None:
+    """Attempt reset and close, preserving an earlier failure or interrupt.
 
-    Cleanup must never let a hardware disappearance during reset prevent
-    ``close()``; this is the intentionally lossy half of that guarantee.
+    Expected library cleanup errors are reported. Unexpected errors and
+    interrupts propagate after closure, unless a primary error already exists.
     """
+    failures: list[tuple[str, BaseException]] = []
     try:
-        reset_surface(session)
-    except XTouchCompactError as error:
-        print(f"Could not reset surface during cleanup (device may be gone): {error}")
+        if session.state is SessionState.READY:
+            reset_surface(session)
+    except BaseException as error:
+        failures.append(("reset surface", error))
+    finally:
+        try:
+            session.close()
+        except BaseException as error:
+            failures.append(("close session", error))
 
-
-def safe_close(session: XTouchCompactSession) -> None:
-    """Close the session, reporting rather than raising on failure.
-
-    Never lets a close failure mask a primary exception already
-    propagating through the caller's ``finally`` block.
-    """
-    try:
-        session.close()
-    except XTouchCompactError as error:
-        print(f"Could not cleanly close the session: {error}")
+    for action, error in failures:
+        print(f"Could not {action} during cleanup: {type(error).__name__}: {error}")
+    if primary_error is None:
+        for _, error in failures:
+            if not isinstance(error, XTouchCompactError):
+                raise error
 
 
 def step_aconnect() -> None:
@@ -197,25 +199,27 @@ def run(session: XTouchCompactSession) -> int:
         record("connect", "FAIL")
         return print_summary()
 
+    primary_error: BaseException | None = None
     try:
         try:
             session.initialize()
         except XTouchCompactError as error:
+            primary_error = error
             print(f"Could not initialize: {error}")
             record("connect", "FAIL")
             return print_summary()
 
         print("\nTurning off all button LEDs and encoder rings for a clean start...")
-        best_effort_reset(session)
+        reset_surface(session)
         step_fader(session)
         step_play_led(session)
         step_encoder_ring(session)
         step_receive_loop(session)
+    except BaseException as error:
+        primary_error = error
+        raise
     finally:
-        if session.state is SessionState.READY:
-            print("\nResetting all button LEDs and encoder rings before exit...")
-            best_effort_reset(session)
-        safe_close(session)
+        cleanup(session, primary_error)
 
     return print_summary()
 

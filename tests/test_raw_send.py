@@ -1,11 +1,11 @@
-"""Raw diagnostic ``send()`` as a state-invalidating override.
+"""Raw diagnostic output and subsequent semantic reconciliation.
 
 ``send()`` bypasses semantic deduplication and touch ownership on the way
 out, but a successful transmission that matches a tracked RX binding must
-invalidate the affected *last-sent* command history so a later semantic
-setter or :meth:`~xtouch_compact.XTouchCompactSession.sync_feedback` call
-is not suppressed as a duplicate of the raw traffic. See ``send()``'s
-docstring in ``session.py`` for the full contract.
+invalidate affected non-fader history. Motor output instead records its raw
+value and invalidates observation currency. Desired values and ownership
+survive successful sends; failed connection handling remains separate.
+See ``send()`` in ``session.py`` for the full contract.
 """
 
 from __future__ import annotations

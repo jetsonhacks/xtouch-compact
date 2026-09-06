@@ -133,14 +133,16 @@ The script walks through, in order:
 7. **Receive loop.** Prints decoded events while you move the fader, turn
    encoder 1, and press PLAY, then asks whether all three produced events.
 
-On normal exit, the script turns button LEDs and encoder rings off. Cleanup
-also attempts this after a step failure, `Ctrl-C`, or a failure during the
-final reset itself, but a lost connection can prevent those commands from
-reaching the device -- reset is best-effort and any failure is reported, not
-raised. The session is always closed once it was successfully connected,
-independent of whether that reset succeeded: initialization failing after a
-successful connection, a failing step, and a failing final reset all still
-close the session. Faders stay at their last position.
+On exit, cleanup attempts to turn button LEDs and encoder rings off if the
+session is still ready. A lost connection can prevent those commands from
+reaching the device. After a successful connection, `close()` is always
+attempted, even if initialization, a step, or final reset raises an error or
+interrupt. This guarantees a closure attempt, not successful hardware I/O.
+Cleanup failures are reported without replacing an earlier error. With no
+earlier error, unexpected cleanup exceptions and interrupts propagate after
+the closure attempt; library cleanup errors remain best-effort warnings.
+The initial reset must succeed before the interactive checks run. Faders
+stay at their last position.
 Each completed stage records a pass/fail/skip; a summary prints after normal
 completion. A clean
 run through all stages is first-hour proof that the physical device, the

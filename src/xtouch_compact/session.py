@@ -237,45 +237,24 @@ class XTouchCompactSession:
         return ReceivedInput(message, physical_event)
 
     def send(self, message: RawMidiMessage) -> None:
-        """Send one raw typed MIDI message after startup initialization.
+        """Send diagnostic MIDI immediately, bypassing deduplication and touch.
 
-        This is a diagnostic escape hatch, not a semantic setter: unlike
-        :meth:`set_button_led` and its siblings, it is never deduplicated,
-        never defers to fader touch ownership, and never changes any
-        *desired* feedback value. Desired state, touch ownership, and
-        observed fader positions are exactly what the last semantic call
-        left them; only host-controlled *command history* (the "last-sent"
-        bookkeeping used to suppress duplicate output) can be affected, and
-        only after the transport has accepted the message.
+        After a successful send on the configured output channel, matching
+        button/ring/status/layer commands invalidate their last-sent history.
+        A ring-mode command also invalidates the ring's display history.
+        Later setters or sync_feedback() can restore known desired feedback.
 
-        Raw output is treated as a diagnostic override: once transmission
-        succeeds, if the message's type, address, and channel match a
-        tracked RX binding on the configured Global MIDI Channel -- a
-        button LED, an encoder ring mode or display, the foot-switch
-        status LED, layer selection, or a fader position -- this session
-        invalidates (marks unknown), rather than overwrites, the affected
-        last-sent history. It never touches unrelated controls, traffic on
-        another channel, or unmapped addresses. Consequences:
+        A matching motor command instead records its raw value as
+        last_commanded_value and marks the observation non-current. Desired
+        value, observed position, and touch ownership remain unchanged.
+        Subsequent set_fader() calls still defer while touched and suppress
+        redundant commands; sync_feedback() does not reconcile faders.
 
-        - A subsequent semantic setter for the same control is no longer
-          suppressed as a no-op duplicate, even if its value happens to
-          match what was last requested, and reliably reasserts the
-          application's desired value.
-        - :meth:`sync_feedback` reassembles from invalidated history the
-          same way it does after :meth:`invalidate_feedback_state` or a
-          reconnect.
-        - Selecting a raw encoder ring mode additionally invalidates that
-          encoder's display history, matching the hardware's own
-          mode-redraw behavior (see :meth:`set_encoder_ring_mode`).
-        - A raw fader position command additionally marks that fader's
-          observation non-current, exactly as a normal motor command does,
-          so a stale observation cannot suppress a later necessary motor
-          command; the fader's desired value, observed value, touch state,
-          and owner are untouched.
-
-        A failed send raises before any bookkeeping changes, so a
-        transport failure never invalidates history for a command that was
-        never actually transmitted.
+        Wrong-channel and unmapped output has no tracking effect after a
+        successful send. Failed sends skip this raw-output bookkeeping, but
+        TransportConnectionError still disconnects and resets live fader
+        state and feedback history through normal connection-loss handling.
+        See docs/usage.md#raw-diagnostic-output for details.
         """
         self._require_ready()
         self._send_transport(message)

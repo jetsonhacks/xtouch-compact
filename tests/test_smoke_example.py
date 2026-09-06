@@ -90,12 +90,29 @@ def test_connect_failure_is_reported_without_closing(
     assert exit_code == 1
 
 
-def test_initialization_failure_after_connection_still_closes(
+def test_initial_reset_failure_aborts_steps_and_closes(
     smoke: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_steps(smoke, monkeypatch)
+    monkeypatch.setattr(
+        smoke, "reset_surface", Mock(side_effect=[RuntimeError("initial reset"), None])
+    )
+    session = _mock_session(SessionState.READY)
+    with pytest.raises(RuntimeError, match="initial reset"):
+        smoke.run(session)
+    smoke.step_fader.assert_not_called()
+    session.close.assert_called_once()
+
+
+@pytest.mark.parametrize("close_error", [None, RuntimeError, KeyboardInterrupt])
+def test_initialization_failure_after_connection_still_closes(
+    smoke: ModuleType, monkeypatch: pytest.MonkeyPatch, close_error
 ) -> None:
     _stub_steps(smoke, monkeypatch)
     session = _mock_session(SessionState.STARTUP_LAYER_UNASSERTED)
     session.initialize.side_effect = LifecycleError("initialization failed")
+    if close_error is not None:
+        session.close.side_effect = close_error("close failed")
 
     exit_code = smoke.run(session)
 
@@ -134,40 +151,62 @@ def test_keyboard_interrupt_during_a_step_still_triggers_closure(
     session.close.assert_called_once()
 
 
-def test_final_reset_failure_does_not_prevent_close(
+@pytest.mark.parametrize(
+    "error_type", [TransportConnectionError, RuntimeError, KeyboardInterrupt]
+)
+@pytest.mark.parametrize("stage", ["reset", "close"])
+def test_cleanup_failure_still_attempts_close(
     smoke: ModuleType,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    error_type: type[BaseException],
+    stage: str,
 ) -> None:
     _stub_steps(smoke, monkeypatch)
-    monkeypatch.setattr(
-        smoke, "reset_surface", Mock(side_effect=TransportConnectionError("gone"))
-    )
+    reset = Mock(side_effect=[None, error_type("gone")] if stage == "reset" else None)
+    monkeypatch.setattr(smoke, "reset_surface", reset)
     session = _mock_session(SessionState.READY)
+    if stage == "close":
+        session.close.side_effect = error_type("gone")
 
-    exit_code = smoke.run(session)
+    if error_type is TransportConnectionError:
+        assert smoke.run(session) == 0
+    else:
+        with pytest.raises(error_type, match="gone"):
+            smoke.run(session)
 
     session.close.assert_called_once()
-    assert exit_code == 0
     assert "gone" in capsys.readouterr().out
 
 
-def test_primary_failure_remains_identifiable_when_close_also_fails(
+@pytest.mark.parametrize(
+    "error_type", [TransportConnectionError, RuntimeError, KeyboardInterrupt]
+)
+@pytest.mark.parametrize("primary_type", [RuntimeError, KeyboardInterrupt])
+def test_primary_failure_survives_reset_and_close_failures(
     smoke: ModuleType,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    error_type: type[BaseException],
+    primary_type: type[BaseException],
 ) -> None:
     _stub_steps(smoke, monkeypatch)
-    smoke.step_fader.side_effect = RuntimeError("primary failure")
-    monkeypatch.setattr(smoke, "reset_surface", Mock())
+    primary = primary_type("primary failure")
+    smoke.step_fader.side_effect = primary
+    monkeypatch.setattr(
+        smoke, "reset_surface", Mock(side_effect=[None, error_type("reset failure")])
+    )
     session = _mock_session(SessionState.READY)
-    session.close.side_effect = TransportConnectionError("close failure")
+    session.close.side_effect = error_type("close failure")
 
-    with pytest.raises(RuntimeError, match="primary failure"):
+    with pytest.raises(primary_type) as caught:
         smoke.run(session)
 
+    assert caught.value is primary
     session.close.assert_called_once()
-    assert "close failure" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "reset failure" in output
+    assert "close failure" in output
 
 
 def test_step_failure_when_not_ready_does_not_attempt_reset(

@@ -233,37 +233,30 @@ adjust a parameter, and PLAY might trigger an application action. Robot
 bindings, motion planning, servo loops, and safety functions are not supplied.
 The library does not guarantee real-time timing or device presence.
 
-Use the semantic setters for tracked feedback. Raw diagnostic `send()` bypasses
-deduplication and fader touch ownership on the way out: it is not suppressed
-as a duplicate, and it transmits immediately even while a fader is human-owned.
-It never changes any *desired* value, touch state, or observed fader position.
+## Raw Diagnostic Output
 
-What it does affect is command history -- the "last-sent" bookkeeping used to
-suppress duplicate output. Once the transport accepts a raw message, if its
-type, address, and channel match a tracked RX binding (a button LED, an
-encoder ring mode or display, the foot-switch status LED, layer selection, or
-a fader position) on the configured Global MIDI Channel, the corresponding
-history is invalidated -- marked unknown, not overwritten with the raw value.
-Traffic on another channel or at an unmapped address leaves every tracked
-control alone. Consequences:
+Use semantic setters for normal tracked feedback. Raw `send()` transmits
+immediately, bypassing deduplication and fader touch ownership. After a
+successful send, it updates bookkeeping only when the message matches a
+tracked output on the configured Global MIDI Channel:
 
-- The next semantic setter for that control is not suppressed as a no-op
-  duplicate, even if its value happens to match what was last requested, and
-  reliably reasserts the application's own intent.
-- `sync_feedback()` reasserts invalidated history the same way it does after
-  `invalidate_feedback_state()` or a reconnect.
-- A raw encoder ring-mode command also invalidates that encoder's display
-  history, mirroring the same hardware mode-redraw effect `set_encoder_ring_mode()`
-  compensates for (see [Send Feedback](#send-feedback)).
-- A raw fader position command also marks that fader's observation
-  non-current, exactly as a normal motor command does, so a stale observation
-  cannot suppress a later necessary command; desired value, observed value,
-  touch state, and owner are untouched.
+| Raw command | Effect on tracked state |
+|---|---|
+| Button LED, ring display, foot-switch LED, or layer | Mark the affected last-sent history unknown. Preserve desired values. |
+| Ring mode | Invalidate both mode and display history because the hardware redraws the ring. |
+| Fader position | Record the raw value in `last_commanded_value` and set `observation_is_current` false. Preserve desired value, observed position, touch, and ownership. |
 
-A failed raw send raises before any of this bookkeeping runs, so a command
-that was never actually transmitted never invalidates history. Mixing raw
-writes with setters therefore no longer requires a manual
-`invalidate_feedback_state()` workaround or a separate diagnostic session for
-these tracked controls; it remains good practice to keep raw motor
-experiments outside normal application flow so diagnostic traffic is easy to
-tell apart from real commands.
+For non-fader feedback, a later semantic setter or `sync_feedback()` can
+reassert known desired values. For faders, `set_fader()` and processed release
+events still follow the [ownership rules](#fader-ownership): they defer while
+human-owned and suppress a command that already matches usable history.
+`sync_feedback()` does not move or reconcile faders. For example, raw motor
+value 40 after desired value 90 allows a later `set_fader(..., 90)` to send;
+raw value 90 followed by the same request needs no additional command.
+
+Successful wrong-channel or unmapped output leaves tracked state unchanged.
+A failed send skips raw-output bookkeeping. If it raises
+`TransportConnectionError`, normal connection-loss handling still disconnects,
+resets live fader state, and invalidates non-fader history while preserving
+non-fader desired feedback. A send failure does not prove that nothing reached
+the device. See [Reconnect](#reconnect).
