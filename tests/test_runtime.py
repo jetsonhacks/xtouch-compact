@@ -7,7 +7,6 @@ from xtouch_compact import (
     Button,
     ButtonLedState,
     ControlChange,
-    DeviceSpecification,
     DiscoveryError,
     Encoder,
     EncoderRingDisplay,
@@ -68,18 +67,15 @@ class RuntimeTransport:
         self.endpoint = None
 
 
-def runtime_session(
-    specification: DeviceSpecification, transport: RuntimeTransport
-) -> XTouchCompactSession:
-    return make_session(specification, transport)
+def runtime_session(transport: RuntimeTransport) -> XTouchCompactSession:
+    return make_session(transport)
 
 
 def ready_runtime_session(
-    specification: DeviceSpecification,
     connect_results: list[object] | None = None,
 ) -> tuple[XTouchCompactSession, RuntimeTransport]:
     transport = RuntimeTransport(connect_results or [(24, 0)])
-    session = runtime_session(specification, transport)
+    session = runtime_session(transport)
     session.connect()
     session.initialize()
     transport.actions.clear()
@@ -87,12 +83,10 @@ def ready_runtime_session(
     return session, transport
 
 
-def test_device_absent_at_startup_leaves_session_retryable(
-    specification: DeviceSpecification,
-) -> None:
+def test_device_absent_at_startup_leaves_session_retryable() -> None:
     missing = DiscoveryError("no matching device")
     transport = RuntimeTransport([missing, (31, 0)])
-    session = runtime_session(specification, transport)
+    session = runtime_session(transport)
 
     with pytest.raises(DiscoveryError, match="no matching"):
         session.connect()
@@ -107,11 +101,9 @@ def test_device_absent_at_startup_leaves_session_retryable(
     assert transport.endpoint == (31, 0)
 
 
-def test_keyboard_interrupt_during_connect_leaves_session_retryable(
-    specification: DeviceSpecification,
-) -> None:
+def test_keyboard_interrupt_during_connect_leaves_session_retryable() -> None:
     transport = RuntimeTransport([KeyboardInterrupt(), (31, 0)])
-    session = runtime_session(specification, transport)
+    session = runtime_session(transport)
 
     with pytest.raises(KeyboardInterrupt):
         session.connect()
@@ -125,10 +117,8 @@ def test_keyboard_interrupt_during_connect_leaves_session_retryable(
     assert transport.endpoint == (31, 0)
 
 
-def test_keyboard_interrupt_during_reconnect_leaves_disconnected(
-    specification: DeviceSpecification,
-) -> None:
-    session, transport = ready_runtime_session(specification, [(24, 0), (31, 0)])
+def test_keyboard_interrupt_during_reconnect_leaves_disconnected() -> None:
+    session, transport = ready_runtime_session([(24, 0), (31, 0)])
     session.set_button_led(Button.PLAY, ButtonLedState.ON)
     transport.send_failure = (
         lambda message: isinstance(message, ProgramChange),
@@ -143,10 +133,8 @@ def test_keyboard_interrupt_during_reconnect_leaves_disconnected(
     assert session.button_feedback_state(Button.PLAY).desired is ButtonLedState.ON
 
 
-def test_connection_loss_during_send_preserves_desired_feedback(
-    specification: DeviceSpecification,
-) -> None:
-    session, transport = ready_runtime_session(specification, [(24, 0), (31, 0)])
+def test_connection_loss_during_send_preserves_desired_feedback() -> None:
+    session, transport = ready_runtime_session([(24, 0), (31, 0)])
     session.set_button_led(Button.PLAY, ButtonLedState.ON)
     transport.send_failure = (
         lambda message: isinstance(message, NoteOn),
@@ -167,10 +155,8 @@ def test_connection_loss_during_send_preserves_desired_feedback(
     assert session.button_feedback_state(Button.PLAY).last_sent is ButtonLedState.BLINK
 
 
-def test_connection_loss_during_receive_resets_live_fader_state(
-    specification: DeviceSpecification,
-) -> None:
-    session, transport = ready_runtime_session(specification, [(24, 0), (31, 0)])
+def test_connection_loss_during_receive_resets_live_fader_state() -> None:
+    session, transport = ready_runtime_session([(24, 0), (31, 0)])
     transport.incoming.append(ControlChange(1, 101, 127))
     session.receive_input()
     session.set_fader(Fader.CHANNEL_1, 70)
@@ -194,10 +180,8 @@ def test_connection_loss_during_receive_resets_live_fader_state(
     assert ControlChange(2, 1, 70) not in transport.sent
 
 
-def test_reconnect_uses_new_endpoint_initializes_then_restores_feedback(
-    specification: DeviceSpecification,
-) -> None:
-    session, transport = ready_runtime_session(specification, [(24, 0), (31, 0)])
+def test_reconnect_uses_new_endpoint_initializes_then_restores_feedback() -> None:
+    session, transport = ready_runtime_session([(24, 0), (31, 0)])
     session.set_button_led(Button.PLAY, ButtonLedState.ON)
     session.set_encoder_ring_mode(Encoder.CHANNEL_1, EncoderRingMode.PAN)
     session.set_encoder_ring_value(Encoder.CHANNEL_1, EncoderRingDisplay.at(7))
@@ -238,11 +222,10 @@ def test_reconnect_uses_new_endpoint_initializes_then_restores_feedback(
     ],
 )
 def test_failed_reconnect_never_reports_ready(
-    specification: DeviceSpecification,
     failure_match: Callable[[object], bool],
     failure: Exception,
 ) -> None:
-    session, transport = ready_runtime_session(specification, [(24, 0), (31, 0)])
+    session, transport = ready_runtime_session([(24, 0), (31, 0)])
     session.set_button_led(Button.PLAY, ButtonLedState.ON)
     transport.send_failure = (failure_match, failure)
 
@@ -255,11 +238,9 @@ def test_failed_reconnect_never_reports_ready(
     assert session.button_feedback_state(Button.PLAY).last_sent is None
 
 
-def test_ambiguous_rediscovery_remains_an_explicit_failure(
-    specification: DeviceSpecification,
-) -> None:
+def test_ambiguous_rediscovery_remains_an_explicit_failure() -> None:
     ambiguity = DiscoveryError("multiple bidirectional ports match")
-    session, transport = ready_runtime_session(specification, [(24, 0), ambiguity])
+    session, transport = ready_runtime_session([(24, 0), ambiguity])
 
     with pytest.raises(DiscoveryError, match="multiple"):
         session.reconnect()
@@ -268,12 +249,8 @@ def test_ambiguous_rediscovery_remains_an_explicit_failure(
     assert transport.open_resources == 0
 
 
-def test_repeated_reconnect_and_close_cycles_do_not_leak_resources(
-    specification: DeviceSpecification,
-) -> None:
-    session, transport = ready_runtime_session(
-        specification, [(24, 0), (31, 0), (32, 1)]
-    )
+def test_repeated_reconnect_and_close_cycles_do_not_leak_resources() -> None:
+    session, transport = ready_runtime_session([(24, 0), (31, 0), (32, 1)])
     session.set_button_led(Button.PLAY, ButtonLedState.ON)
     transport.sent.clear()
 

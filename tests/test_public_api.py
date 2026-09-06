@@ -17,7 +17,6 @@ from xtouch_compact import (
     ButtonLedState,
     ButtonPressed,
     DeviceNotFoundError,
-    DeviceSpecification,
     DiscoveryError,
     Encoder,
     EncoderRingDisplay,
@@ -38,7 +37,6 @@ from xtouch_compact import (
 )
 
 EXPECTED_PUBLIC_EXPORTS = {
-    "DEFAULT_SPEC_PATH",
     "XTouchCompactSession",
     "SessionState",
     "ReceivedInput",
@@ -78,9 +76,6 @@ EXPECTED_PUBLIC_EXPORTS = {
     "TransportConnectionError",
     "TransportStateError",
     "UnsupportedOperationError",
-    "SpecificationError",
-    "DeviceSpecification",
-    "load_device_specification",
     "AlsaSequencerTransport",
     "ControlChange",
     "InboundDecoder",
@@ -158,14 +153,11 @@ class TestLifecycle:
             assert entered.state is SessionState.READY
         assert device_session.state is SessionState.DISCONNECTED
 
-    def test_open_is_the_application_constructor(
-        self, specification: DeviceSpecification
-    ) -> None:
+    def test_open_is_the_application_constructor(self) -> None:
         transport = FakeTransport()
         session = xtouch_compact.XTouchCompactSession.open(
             global_midi_channel=2,
             transport=transport,
-            specification=specification,
         )
         assert session.state is SessionState.DISCONNECTED
         with session:

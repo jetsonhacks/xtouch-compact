@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
-from xtouch_compact import DeviceSpecification, Layer, XTouchCompactSession
+from xtouch_compact import Layer, XTouchCompactSession
 
 SPEC_PATH = Path(__file__).resolve().parents[1] / "specs" / "xtouch-compact-midi.yaml"
 
@@ -44,7 +44,6 @@ class FakeTransport:
 
 
 def make_session(
-    specification: DeviceSpecification,
     transport: object,
     *,
     global_midi_channel: int = 2,
@@ -53,14 +52,12 @@ def make_session(
     """Construct a session around an already-created test transport."""
     return XTouchCompactSession(
         transport,
-        specification,
         global_midi_channel=global_midi_channel,
         startup_layer=startup_layer,
     )
 
 
 def make_fake_session(
-    specification: DeviceSpecification,
     transport: FakeTransport | None = None,
     *,
     ready: bool = False,
@@ -71,7 +68,6 @@ def make_fake_session(
     if transport is None:
         transport = FakeTransport()
     session = make_session(
-        specification,
         transport,
         global_midi_channel=global_midi_channel,
         startup_layer=startup_layer,
@@ -84,7 +80,7 @@ def make_fake_session(
 
 
 class SessionBuilder(Protocol):
-    """Pytest fixture type for :func:`make_fake_session` bound to one specification."""
+    """Pytest fixture type for :func:`make_fake_session`."""
 
     def __call__(
         self,
@@ -96,9 +92,7 @@ class SessionBuilder(Protocol):
     ) -> tuple[XTouchCompactSession, FakeTransport]: ...
 
 
-def bind_session_builder(
-    specification: DeviceSpecification,
-) -> Callable[..., tuple[XTouchCompactSession, FakeTransport]]:
+def bind_session_builder() -> Callable[..., tuple[XTouchCompactSession, FakeTransport]]:
     def build_session(
         transport: FakeTransport | None = None,
         *,
@@ -107,7 +101,6 @@ def bind_session_builder(
         startup_layer: Layer = Layer.A,
     ) -> tuple[XTouchCompactSession, FakeTransport]:
         return make_fake_session(
-            specification,
             transport,
             ready=ready,
             global_midi_channel=global_midi_channel,

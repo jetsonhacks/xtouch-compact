@@ -19,7 +19,10 @@ does not need MIDI note numbers, controller numbers, or ALSA client numbers.
 Python dependencies, installed by `uv sync` from `pyproject.toml`:
 
 - `alsa-midi` 1.0.4 or later (ALSA Sequencer client)
-- `PyYAML` 6.0.2 or later (device map loader)
+
+The device map is a fixed typed Python table (`xtouch_compact.device_map`)
+built into the library; there is no runtime YAML dependency or device
+specification to load.
 
 This project does not include a kernel, kernel modules, or an X-TOUCH device
 driver. The controller is USB class-compliant MIDI. Some Linux kernels,
@@ -37,9 +40,9 @@ cd xtouch-compact
 uv sync
 ```
 
-That creates `.venv`, installs `alsa-midi` and `PyYAML`, and installs this
-package in editable mode. The lockfile pins the exact versions. Dev tools
-(`pytest`, `ruff`, `mypy`) are included.
+That creates `.venv`, installs `alsa-midi`, and installs this package in
+editable mode. The lockfile pins the exact versions. Dev tools (`pytest`,
+`ruff`, `mypy`) are included.
 
 ```bash
 uv run pytest

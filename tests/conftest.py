@@ -1,4 +1,4 @@
-"""Shared pytest fixtures: one spec load, one fake-session factory."""
+"""Shared pytest fixtures: one fake-session factory and the historical YAML."""
 
 from __future__ import annotations
 
@@ -14,12 +14,7 @@ from tests.helpers import (
     bind_session_builder,
     make_fake_session,
 )
-from xtouch_compact import (
-    DeviceSpecification,
-    InboundDecoder,
-    XTouchCompactSession,
-    load_device_specification,
-)
+from xtouch_compact import InboundDecoder, XTouchCompactSession
 
 
 @pytest.fixture(scope="session")
@@ -28,29 +23,28 @@ def spec_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def specification(spec_path: Path) -> DeviceSpecification:
-    return load_device_specification(spec_path)
-
-
-@pytest.fixture(scope="session")
 def device_spec_document(spec_path: Path) -> dict[str, object]:
+    """The historical characterization YAML, parsed directly.
+
+    This is evidence, not runtime configuration: see ``specs/README.md``.
+    Only tests about that historical artifact itself should use this
+    fixture; runtime behavior tests use the fixed Python device map.
+    """
     loaded = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
 
 @pytest.fixture(scope="session")
-def decoder(specification: DeviceSpecification) -> InboundDecoder:
-    return InboundDecoder(specification)
+def decoder() -> InboundDecoder:
+    return InboundDecoder()
 
 
 @pytest.fixture
-def build_session(specification: DeviceSpecification) -> SessionBuilder:
-    return bind_session_builder(specification)
+def build_session() -> SessionBuilder:
+    return bind_session_builder()
 
 
 @pytest.fixture
-def ready_session(
-    specification: DeviceSpecification,
-) -> tuple[XTouchCompactSession, FakeTransport]:
-    return make_fake_session(specification, ready=True)
+def ready_session() -> tuple[XTouchCompactSession, FakeTransport]:
+    return make_fake_session(ready=True)

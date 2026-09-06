@@ -8,6 +8,7 @@ from enum import Enum
 
 from .controls import Button, Encoder, Fader, FootControl, Layer
 from .decoder import InboundDecoder
+from .device_map import RX_CONTROL_INDEX
 from .errors import LifecycleError, SessionConfigurationError, TransportConnectionError
 from .events import (
     FaderPositionReported,
@@ -24,7 +25,6 @@ from .feedback import (
 )
 from .feedback_encoder import SemanticFeedbackEncoder
 from .midi import RawMidiMessage
-from .specification import DeviceSpecification
 from .surface_state import (
     ButtonFeedbackState,
     EncoderFeedbackState,
@@ -80,25 +80,21 @@ class XTouchCompactSession:
     def __init__(
         self,
         transport: MidiTransport,
-        specification: DeviceSpecification,
         *,
         global_midi_channel: int,
         startup_layer: Layer = Layer.A,
     ) -> None:
         _validate_session_construction(global_midi_channel, startup_layer)
         self._transport = transport
-        self._specification = specification
-        self._decoder = InboundDecoder(specification)
+        self._decoder = InboundDecoder()
         self._startup_layer = startup_layer
         self._feedback_encoder = SemanticFeedbackEncoder(
-            specification, global_midi_channel=global_midi_channel
+            global_midi_channel=global_midi_channel
         )
         self._state = SessionState.DISCONNECTED
         self._faders = FaderStateController()
         assignable_buttons = tuple(
-            button
-            for button in Button
-            if (button, "led") in specification.rx_control_index
+            button for button in Button if (button, "led") in RX_CONTROL_INDEX
         )
         self._surface = SurfaceStateController(assignable_buttons)
         self._surface.request_layer(startup_layer)
@@ -110,21 +106,21 @@ class XTouchCompactSession:
         global_midi_channel: int,
         startup_layer: Layer = Layer.A,
         port_name: str | None = None,
-        specification: DeviceSpecification | None = None,
         transport: MidiTransport | None = None,
     ) -> XTouchCompactSession:
-        """Construct a session with the default ALSA transport and device map.
+        """Construct a session with the default ALSA transport.
 
         Does not connect and does not require the device to be attached.
-        Use as a context manager to connect, initialize, and close:
+        Uses the fixed factory device map; there is no configurable
+        device specification. Use as a context manager to connect,
+        initialize, and close:
 
         ``with XTouchCompactSession.open(global_midi_channel=2) as session:``
 
         ``port_name`` is forwarded to :class:`AlsaSequencerTransport` when
-        ``transport`` is omitted. ``specification`` defaults to
-        :func:`load_device_specification`. Pass ``transport`` only for
-        tests or a non-ALSA backend; the explicit constructor remains
-        available for the same purpose.
+        ``transport`` is omitted. Pass ``transport`` only for tests or a
+        non-ALSA backend; the explicit constructor remains available for
+        the same purpose.
         """
         if transport is None:
             from .alsa_transport import AlsaSequencerTransport
@@ -134,13 +130,8 @@ class XTouchCompactSession:
             raise SessionConfigurationError(
                 "port_name applies only when using the default ALSA transport"
             )
-        if specification is None:
-            from .specification import load_device_specification
-
-            specification = load_device_specification()
         return cls(
             transport,
-            specification,
             global_midi_channel=global_midi_channel,
             startup_layer=startup_layer,
         )

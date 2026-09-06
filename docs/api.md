@@ -24,13 +24,14 @@ constructed -> connect() -> STARTUP_LAYER_UNASSERTED
 
 `XTouchCompactSession.open(*, global_midi_channel, startup_layer=Layer.A, port_name=None)`
 constructs a disconnected session with `AlsaSequencerTransport` and the
-bundled device map. It does not open ALSA. `port_name` is the optional
-ALSA port-name filter. Pass `transport` and/or `specification` to skip
-those defaults (tests and non-ALSA backends).
+fixed factory device map. It does not open ALSA. `port_name` is the
+optional ALSA port-name filter. Pass `transport` to skip the default
+transport (tests and non-ALSA backends).
 
-`XTouchCompactSession(transport, specification, *, global_midi_channel, startup_layer=Layer.A)`
-is the explicit constructor when the caller already has a transport and
-specification.
+`XTouchCompactSession(transport, *, global_midi_channel, startup_layer=Layer.A)`
+is the explicit constructor when the caller already has a transport. There
+is no device-specification argument: the library supports one fixed
+factory profile, represented in `xtouch_compact.device_map`.
 
 `global_midi_channel` is the device Global MIDI Channel, 1–16.
 `startup_layer` must be `Layer.A` or `Layer.B`. Invalid values raise
@@ -38,7 +39,7 @@ specification.
 
 | Method | Purpose |
 |---|---|
-| `open(...)` | Class method: default ALSA transport and device map. Does not connect. |
+| `open(...)` | Class method: default ALSA transport and fixed factory device map. Does not connect. |
 | `connect()` | Open the transport. Does not yet publish semantic input. |
 | `initialize()` | Assert the desired layer and enter `READY`. |
 | `reconnect()` | Rediscover, reconnect, assert layer, restore non-fader feedback. |
@@ -135,7 +136,6 @@ accepted. It is not confirmation that the hardware applied the command.
 XTouchCompactError
 ├── LifecycleError
 ├── SessionConfigurationError
-├── SpecificationError
 ├── DiscoveryError
 │   ├── DeviceNotFoundError
 │   └── AmbiguousDeviceError
@@ -148,17 +148,19 @@ XTouchCompactError
 Catch the narrow subclass, or `XTouchCompactError` for any library failure.
 Application code should not catch ALSA-specific exceptions.
 
-## Configuration
+## Device Map
 
-`load_device_specification(path=DEFAULT_SPEC_PATH)` loads and validates the
-YAML device map. The installed wheel includes the map as package data. A
-source checkout uses `specs/xtouch-compact-midi.yaml`. The human-readable
-map is [xtouch-compact-midi.md](xtouch-compact-midi.md); empirical
-value semantics are in
-[hardware-observations.md](hardware-observations.md).
+The library supports one fixed factory Standard MIDI profile, defined as a
+typed Python table in `xtouch_compact.device_map` (an internal module, not
+part of the public API). There is no runtime device-specification loading,
+no injection point, and no YAML dependency at runtime. Mappings changed
+with the X-TOUCH Editor are not supported.
 
-`DeviceSpecification` is the validated, immutable result. Pass it to
-`XTouchCompactSession`.
+`specs/xtouch-compact-midi.yaml` remains in the repository as a historical
+characterization artifact — see [specs/README.md](../specs/README.md) — not
+as runtime configuration. The human-readable map is
+[xtouch-compact-midi.md](xtouch-compact-midi.md); empirical value
+semantics are in [hardware-observations.md](hardware-observations.md).
 
 ## Advanced and Diagnostic Exports
 

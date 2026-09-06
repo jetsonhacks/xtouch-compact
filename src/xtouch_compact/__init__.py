@@ -3,9 +3,10 @@
 This package exposes a stable application interface for treating the
 X-TOUCH COMPACT as a semantic bidirectional physical control surface.
 Application code should import from this package root; it should not need
-to import implementation modules (``_specification_common``,
-``_specification_rx``, ``_specification_tx``, ``feedback_encoder``,
-``fader_state``, ``surface_state``) directly for normal use.
+to import implementation modules (``device_map``, ``feedback_encoder``,
+``fader_state``, ``surface_state``) directly for normal use. The library
+supports only the fixed factory Standard MIDI profile in ``device_map``;
+there is no runtime device-specification loading or injection.
 
 The exports fall into five categories:
 
@@ -48,7 +49,6 @@ from .errors import (
     DiscoveryError,
     LifecycleError,
     SessionConfigurationError,
-    SpecificationError,
     TransportConnectionError,
     TransportError,
     TransportStateError,
@@ -76,11 +76,6 @@ from .feedback import (
 )
 from .midi import ControlChange, NoteOff, NoteOn, ProgramChange, RawMidiMessage
 from .session import ReceivedInput, SessionState, XTouchCompactSession
-from .specification import (
-    DEFAULT_SPEC_PATH,
-    DeviceSpecification,
-    load_device_specification,
-)
 from .surface_state import (
     ButtonFeedbackState,
     EncoderFeedbackState,
@@ -93,7 +88,6 @@ from .transport import MidiTransport
 __version__ = "0.1.0"
 
 __all__ = [
-    "DEFAULT_SPEC_PATH",
     # Session / lifecycle
     "ReceivedInput",
     "SessionState",
@@ -134,15 +128,11 @@ __all__ = [
     "DiscoveryError",
     "LifecycleError",
     "SessionConfigurationError",
-    "SpecificationError",
     "TransportConnectionError",
     "TransportError",
     "TransportStateError",
     "UnsupportedOperationError",
     "XTouchCompactError",
-    # Configuration / specification
-    "DeviceSpecification",
-    "load_device_specification",
     # Advanced/diagnostic transport and codec types
     "AlsaSequencerTransport",
     "ControlChange",

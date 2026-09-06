@@ -4,7 +4,6 @@ from tests.helpers import FakeTransport, SessionBuilder
 from xtouch_compact import (
     ButtonPressed,
     ControlChange,
-    DeviceSpecification,
     Layer,
     LifecycleError,
     NoteOn,
@@ -82,52 +81,40 @@ def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close(
 
 
 @pytest.mark.parametrize("channel", [0, 17, True])
-def test_session_validates_global_midi_channel(
-    specification: DeviceSpecification, channel: object
-) -> None:
+def test_session_validates_global_midi_channel(channel: object) -> None:
     with pytest.raises(SessionConfigurationError, match="global_midi_channel"):
         XTouchCompactSession(
             FakeTransport(),
-            specification,
             global_midi_channel=channel,  # type: ignore[arg-type]
         )
 
 
-def test_session_validates_startup_layer(
-    specification: DeviceSpecification,
-) -> None:
+def test_session_validates_startup_layer() -> None:
     with pytest.raises(SessionConfigurationError, match="startup_layer"):
         XTouchCompactSession(
             FakeTransport(),
-            specification,
             global_midi_channel=2,
             startup_layer="layer_a",  # type: ignore[arg-type]
         )
 
 
-def test_open_constructs_a_disconnected_session(
-    specification: DeviceSpecification,
-) -> None:
+def test_open_constructs_a_disconnected_session() -> None:
     transport = FakeTransport()
     session = XTouchCompactSession.open(
         global_midi_channel=2,
         transport=transport,
-        specification=specification,
     )
 
     assert session.state is SessionState.DISCONNECTED
     assert not transport.connected
 
 
-def test_open_context_manager_connects_initializes_and_closes(
-    specification: DeviceSpecification,
-) -> None:
+def test_open_context_manager_connects_initializes_and_closes() -> None:
     transport = FakeTransport()
     session = XTouchCompactSession.open(
         global_midi_channel=2,
         startup_layer=Layer.B,
         transport=transport,
-        specification=specification,
     )
 
     with session as entered:
@@ -145,14 +132,11 @@ def test_open_defaults_to_alsa_transport_without_connecting() -> None:
     assert session.state is SessionState.DISCONNECTED
 
 
-def test_open_rejects_port_name_with_a_custom_transport(
-    specification: DeviceSpecification,
-) -> None:
+def test_open_rejects_port_name_with_a_custom_transport() -> None:
     with pytest.raises(SessionConfigurationError, match="port_name"):
         XTouchCompactSession.open(
             global_midi_channel=2,
             transport=FakeTransport(),
-            specification=specification,
             port_name="MIDI 1",
         )
 

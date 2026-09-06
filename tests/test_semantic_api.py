@@ -5,7 +5,6 @@ from xtouch_compact import (
     Button,
     ButtonLedState,
     ControlChange,
-    DeviceSpecification,
     Encoder,
     EncoderRingDisplay,
     EncoderRingMode,
@@ -18,17 +17,22 @@ from xtouch_compact import (
     StatusLedState,
     XTouchCompactSession,
 )
+from xtouch_compact.device_map import (
+    ENCODER_RING_MODE_VALUES,
+    PRESET_LAYER_VALUES,
+    RX_CONTROL_INDEX,
+)
 
 
 @pytest.mark.parametrize("fader", list(Fader))
 @pytest.mark.parametrize("value", [0, 64, 127])
-def test_set_fader_resolves_every_rx_address_from_specification(
+def test_set_fader_resolves_every_rx_address_from_device_map(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
     fader: Fader,
     value: int,
 ) -> None:
     device, transport = ready_session
-    binding = device._specification.rx_control_index[(fader, "position")]
+    binding = RX_CONTROL_INDEX[(fader, "position")]
 
     device.set_fader(fader, value)
 
@@ -49,7 +53,7 @@ def test_set_fader_reuses_typed_midi_value_validation(
     assert transport.sent == []
 
 
-def test_every_assignable_button_led_resolves_from_specification(
+def test_every_assignable_button_led_resolves_from_device_map(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
 ) -> None:
     device, transport = ready_session
@@ -63,7 +67,7 @@ def test_every_assignable_button_led_resolves_from_specification(
     expected = [
         NoteOn(
             2,
-            device._specification.rx_control_index[(button, "led")].address.number,
+            RX_CONTROL_INDEX[(button, "led")].address.number,
             2,
         )
         for button in assignable
@@ -79,13 +83,13 @@ def test_every_assignable_button_led_resolves_from_specification(
         (ButtonLedState.BLINK, 3),
     ],
 )
-def test_button_led_states_use_characterized_specification_values(
+def test_button_led_states_use_characterized_device_map_values(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
     state: ButtonLedState,
     velocity: int,
 ) -> None:
     device, transport = ready_session
-    binding = device._specification.rx_control_index[(Button.RECORD, "led")]
+    binding = RX_CONTROL_INDEX[(Button.RECORD, "led")]
 
     device.set_button_led(Button.RECORD, state)
 
@@ -112,12 +116,12 @@ def test_every_encoder_supports_every_ring_mode_from_its_rx_binding(
     mode: EncoderRingMode,
 ) -> None:
     device, transport = ready_session
-    binding = device._specification.rx_control_index[(encoder, "ring_behavior")]
+    binding = RX_CONTROL_INDEX[(encoder, "ring_behavior")]
 
     device.set_encoder_ring_mode(encoder, mode)
 
     assert transport.sent == [
-        ControlChange(2, binding.address.number, binding.details["values"][mode.value])
+        ControlChange(2, binding.address.number, ENCODER_RING_MODE_VALUES[mode.value])
     ]
 
 
@@ -126,7 +130,7 @@ def test_every_encoder_supports_ring_display_output(
     ready_session: tuple[XTouchCompactSession, FakeTransport], encoder: Encoder
 ) -> None:
     device, transport = ready_session
-    binding = device._specification.rx_control_index[(encoder, "ring_value")]
+    binding = RX_CONTROL_INDEX[(encoder, "ring_value")]
 
     device.set_encoder_ring_value(encoder, EncoderRingDisplay.off())
 
@@ -146,13 +150,13 @@ def test_every_encoder_supports_ring_display_output(
         (EncoderRingDisplay.all_blinking(), 28),
     ],
 )
-def test_encoder_ring_display_encodings_come_from_specification(
+def test_encoder_ring_display_encodings_come_from_device_map(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
     display: EncoderRingDisplay,
     encoded: int,
 ) -> None:
     device, transport = ready_session
-    binding = device._specification.rx_control_index[(Encoder.CHANNEL_1, "ring_value")]
+    binding = RX_CONTROL_INDEX[(Encoder.CHANNEL_1, "ring_value")]
 
     device.set_encoder_ring_value(Encoder.CHANNEL_1, display)
 
@@ -178,8 +182,8 @@ def test_encoder_ring_display_rejects_invalid_kind() -> None:
         EncoderRingDisplay("position", 1)  # type: ignore[arg-type]
 
 
-def test_layer_selection_uses_same_specification_mapping_as_initialization(
-    specification: DeviceSpecification, build_session: SessionBuilder
+def test_layer_selection_uses_same_device_map_mapping_as_initialization(
+    build_session: SessionBuilder,
 ) -> None:
     device, transport = build_session(global_midi_channel=7, startup_layer=Layer.B)
 
@@ -187,10 +191,9 @@ def test_layer_selection_uses_same_specification_mapping_as_initialization(
     device.initialize()
     device.select_layer(Layer.A)
 
-    values = specification.rx_control_index[(None, "preset_layer")].details["values"]
     assert transport.sent == [
-        ProgramChange(7, values[Layer.B.value]),
-        ProgramChange(7, values[Layer.A.value]),
+        ProgramChange(7, PRESET_LAYER_VALUES[Layer.B.value]),
+        ProgramChange(7, PRESET_LAYER_VALUES[Layer.A.value]),
     ]
 
 
@@ -204,9 +207,7 @@ def test_foot_switch_status_led_uses_its_rx_mapping(
     encoded: int,
 ) -> None:
     device, transport = ready_session
-    binding = device._specification.rx_control_index[
-        (FootControl.FOOT_SWITCH, "status_led")
-    ]
+    binding = RX_CONTROL_INDEX[(FootControl.FOOT_SWITCH, "status_led")]
 
     device.set_foot_switch_led(state)
 

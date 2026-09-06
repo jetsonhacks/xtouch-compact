@@ -43,21 +43,19 @@ unique fragment of the ALSA port name. Do not hard-code ALSA client or port
 numbers; those identities change across reconnects.
 
 The explicit constructor remains available when the application already
-has a transport or a loaded specification:
+has a transport:
 
 ```python
-from xtouch_compact import (
-    AlsaSequencerTransport,
-    XTouchCompactSession,
-    load_device_specification,
-)
+from xtouch_compact import AlsaSequencerTransport, XTouchCompactSession
 
 session = XTouchCompactSession(
     AlsaSequencerTransport(),
-    load_device_specification(),
     global_midi_channel=2,
 )
 ```
+
+There is no device-specification argument: the library supports one fixed
+factory Standard MIDI profile.
 
 ## Connect and Initialize
 

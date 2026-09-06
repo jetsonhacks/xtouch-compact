@@ -824,7 +824,6 @@ name = "xtouch-compact"
 source = { editable = "." }
 dependencies = [
     { name = "alsa-midi" },
-    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -832,21 +831,20 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pyyaml" },
     { name = "ruff" },
     { name = "types-pyyaml" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "alsa-midi", specifier = ">=1.0.4" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-]
+requires-dist = [{ name = "alsa-midi", specifier = ">=1.0.4" }]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "mypy", specifier = ">=2.3.1" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "ruff", specifier = ">=0.11" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260815" },
 ]

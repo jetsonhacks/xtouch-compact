@@ -25,10 +25,6 @@ class SessionConfigurationError(XTouchCompactError, ValueError):
     """Session construction received an invalid channel or startup layer."""
 
 
-class SpecificationError(XTouchCompactError, ValueError):
-    """The device description is malformed, contradictory, or cannot load."""
-
-
 class DiscoveryError(XTouchCompactError):
     """ALSA discovery did not resolve to exactly one matching endpoint."""
 
