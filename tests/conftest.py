@@ -7,13 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.helpers import (
-    SPEC_PATH,
-    FakeTransport,
-    SessionBuilder,
-    bind_session_builder,
-    make_fake_session,
-)
+from tests.helpers import SPEC_PATH, FakeTransport, SessionFactory, make_fake_session
 from xtouch_compact import InboundDecoder, XTouchCompactSession
 
 
@@ -41,8 +35,8 @@ def decoder() -> InboundDecoder:
 
 
 @pytest.fixture
-def build_session() -> SessionBuilder:
-    return bind_session_builder()
+def build_session() -> SessionFactory:
+    return make_fake_session
 
 
 @pytest.fixture

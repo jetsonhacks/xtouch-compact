@@ -2,7 +2,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from tests.helpers import FakeTransport, SendFailure, SessionBuilder
+from tests.helpers import FakeTransport, SendFailure, SessionFactory
 from xtouch_compact import (
     Button,
     ButtonLedState,
@@ -24,7 +24,7 @@ from xtouch_compact import (
 
 
 def test_initial_snapshot_covers_only_supported_feedback(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     session, _ = build_session()
 
@@ -344,7 +344,7 @@ def test_layer_updates_track_state_and_reassert_on_repeated_selection(
 
 
 def test_startup_layer_assertion_is_recorded_and_never_deduplicated(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     session, transport = build_session(startup_layer=Layer.B)
 

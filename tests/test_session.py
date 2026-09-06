@@ -1,6 +1,6 @@
 import pytest
 
-from tests.helpers import FakeTransport, SessionBuilder
+from tests.helpers import FakeTransport, SessionFactory
 from xtouch_compact import (
     ButtonPressed,
     ControlChange,
@@ -15,7 +15,7 @@ from xtouch_compact import (
 
 
 def test_post_connect_layer_initialization_is_explicit_session_policy(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     device_session, transport = build_session(startup_layer=Layer.B)
 
@@ -29,7 +29,7 @@ def test_post_connect_layer_initialization_is_explicit_session_policy(
 
 
 def test_receive_pipeline_decodes_message_and_preserves_raw_input(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     device_session, _ = build_session(FakeTransport([NoteOn(1, 54, 127)]), ready=True)
 
@@ -41,7 +41,7 @@ def test_receive_pipeline_decodes_message_and_preserves_raw_input(
 
 
 def test_decoder_none_does_not_fail_receive_pipeline(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     raw = ControlChange(2, 1, 64)
     device_session, _ = build_session(FakeTransport([raw]), ready=True)
@@ -54,7 +54,7 @@ def test_decoder_none_does_not_fail_receive_pipeline(
 
 
 def test_inbound_program_change_is_preserved_as_unsupported_device_input(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     raw = ProgramChange(2, 0)
     device_session, _ = build_session(FakeTransport([raw]), ready=True)
@@ -67,7 +67,7 @@ def test_inbound_program_change_is_preserved_as_unsupported_device_input(
 
 
 def test_session_blocks_input_until_layer_is_asserted_and_resets_on_close(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     device_session, transport = build_session()
     device_session.connect()
@@ -142,7 +142,7 @@ def test_open_rejects_port_name_with_a_custom_transport() -> None:
 
 
 def test_ready_methods_report_disconnected_versus_unasserted(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     device_session, _ = build_session()
 

@@ -1,6 +1,6 @@
 import pytest
 
-from tests.helpers import FakeTransport, SessionBuilder
+from tests.helpers import FakeTransport, SessionFactory
 from xtouch_compact import (
     Button,
     ButtonLedState,
@@ -183,7 +183,7 @@ def test_encoder_ring_display_rejects_invalid_kind() -> None:
 
 
 def test_layer_selection_uses_same_device_map_mapping_as_initialization(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     device, transport = build_session(global_midi_channel=7, startup_layer=Layer.B)
 
@@ -230,7 +230,7 @@ def test_foot_switch_status_led_uses_its_rx_mapping(
     ],
 )
 def test_semantic_output_requires_ready_session(
-    build_session: SessionBuilder, operation: object
+    build_session: SessionFactory, operation: object
 ) -> None:
     device, transport = build_session()
 

@@ -2,7 +2,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from tests.helpers import FakeTransport, SendFailure, SessionBuilder
+from tests.helpers import FakeTransport, SendFailure, SessionFactory
 from xtouch_compact import (
     ControlChange,
     Fader,
@@ -318,7 +318,7 @@ def test_observation_validity_is_independent_per_fader(
 
 
 def test_fader_request_before_ready_does_not_change_state(
-    build_session: SessionBuilder,
+    build_session: SessionFactory,
 ) -> None:
     session, _ = build_session()
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol
 
 from xtouch_compact import Layer, XTouchCompactSession
 
@@ -79,32 +78,5 @@ def make_fake_session(
     return session, transport
 
 
-class SessionBuilder(Protocol):
-    """Pytest fixture type for :func:`make_fake_session`."""
-
-    def __call__(
-        self,
-        transport: FakeTransport | None = None,
-        *,
-        ready: bool = False,
-        global_midi_channel: int = 2,
-        startup_layer: Layer = Layer.A,
-    ) -> tuple[XTouchCompactSession, FakeTransport]: ...
-
-
-def bind_session_builder() -> Callable[..., tuple[XTouchCompactSession, FakeTransport]]:
-    def build_session(
-        transport: FakeTransport | None = None,
-        *,
-        ready: bool = False,
-        global_midi_channel: int = 2,
-        startup_layer: Layer = Layer.A,
-    ) -> tuple[XTouchCompactSession, FakeTransport]:
-        return make_fake_session(
-            transport,
-            ready=ready,
-            global_midi_channel=global_midi_channel,
-            startup_layer=startup_layer,
-        )
-
-    return build_session
+SessionFactory = Callable[..., tuple[XTouchCompactSession, FakeTransport]]
+"""Type of the ``build_session`` fixture: see :func:`make_fake_session`."""
