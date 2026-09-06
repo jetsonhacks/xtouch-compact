@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Fixed: raw diagnostic `send()` could leave stale "last-sent" command
+  history that suppressed a later semantic request for the same button LED,
+  encoder ring mode/display, foot-switch status LED, layer selection, or
+  fader position. A successful raw send matching a tracked RX binding on the
+  configured channel now invalidates (never overwrites) that control's
+  command history while leaving desired values, touch ownership, and
+  observed fader positions untouched; see [Application-Owned
+  Bindings](docs/usage.md#application-owned-bindings).
+- Fixed: `examples/smoke.py` could leave the transport connected if
+  `initialize()` failed after a successful `connect()`, or skip `close()`
+  entirely if the final `reset_surface()` call raised. Cleanup now always
+  attempts `close()` after a successful `connect()` and treats the final
+  reset as best-effort, reporting rather than raising on failure.
+
 **Breaking:** replaced the runtime YAML device specification with a fixed,
 typed Python device map (`xtouch_compact.device_map`). The library now
 supports exactly one factory Standard MIDI profile; there is no

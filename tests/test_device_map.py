@@ -37,7 +37,10 @@ from xtouch_compact.device_map import (
     _build_rx_control_index,
     _build_rx_index,
     _build_tx_index,
+    classify_rx_message,
+    matches_layer_program_change,
 )
+from xtouch_compact.midi import ControlChange, NoteOn, ProgramChange
 
 
 @pytest.mark.parametrize("layer", list(Layer))
@@ -279,3 +282,47 @@ def test_rx_protocol_boundaries(operation, first, last, numbers, message_type) -
         assert RX_CONTROL_INDEX[(control, operation)].address == MidiAddress(
             MidiMessageType(message_type), number
         )
+
+
+def test_classify_rx_message_matches_a_tracked_address_on_the_right_channel() -> None:
+    binding = RX_CONTROL_INDEX[(Button.PLAY, "led")]
+
+    result = classify_rx_message(NoteOn(2, binding.address.number, 0), 2)
+
+    assert result is binding
+
+
+def test_classify_rx_message_ignores_the_wrong_channel() -> None:
+    binding = RX_CONTROL_INDEX[(Button.PLAY, "led")]
+
+    assert classify_rx_message(NoteOn(5, binding.address.number, 0), 2) is None
+    assert (
+        classify_rx_message(
+            ControlChange(
+                5, RX_CONTROL_INDEX[(Fader.CHANNEL_1, "position")].address.number, 0
+            ),
+            2,
+        )
+        is None
+    )
+
+
+def test_classify_rx_message_ignores_an_unmapped_address() -> None:
+    assert classify_rx_message(NoteOn(2, 100, 0), 2) is None
+
+
+def test_classify_rx_message_ignores_program_change() -> None:
+    """Layer selection has no RX binding; see matches_layer_program_change."""
+    assert classify_rx_message(ProgramChange(2, 0), 2) is None
+
+
+@pytest.mark.parametrize("program_number", sorted(PRESET_LAYER_VALUES.values()))
+def test_matches_layer_program_change_accepts_every_preset_value_on_channel(
+    program_number: int,
+) -> None:
+    assert matches_layer_program_change(ProgramChange(2, program_number), 2)
+
+
+def test_matches_layer_program_change_rejects_wrong_channel_and_value() -> None:
+    assert not matches_layer_program_change(ProgramChange(5, 0), 2)
+    assert not matches_layer_program_change(NoteOn(2, 0, 0), 2)

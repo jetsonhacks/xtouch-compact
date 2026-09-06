@@ -234,8 +234,36 @@ bindings, motion planning, servo loops, and safety functions are not supplied.
 The library does not guarantee real-time timing or device presence.
 
 Use the semantic setters for tracked feedback. Raw diagnostic `send()` bypasses
-both feedback tracking and fader ownership. Mixing raw writes with setters can
-leave last-sent history stale and suppress a later semantic command. For
-non-fader feedback, `invalidate_feedback_state()` allows a subsequent sync to
-reassert desired values; it does not invalidate fader command history. Use a
-separate diagnostic session for raw motor experiments.
+deduplication and fader touch ownership on the way out: it is not suppressed
+as a duplicate, and it transmits immediately even while a fader is human-owned.
+It never changes any *desired* value, touch state, or observed fader position.
+
+What it does affect is command history -- the "last-sent" bookkeeping used to
+suppress duplicate output. Once the transport accepts a raw message, if its
+type, address, and channel match a tracked RX binding (a button LED, an
+encoder ring mode or display, the foot-switch status LED, layer selection, or
+a fader position) on the configured Global MIDI Channel, the corresponding
+history is invalidated -- marked unknown, not overwritten with the raw value.
+Traffic on another channel or at an unmapped address leaves every tracked
+control alone. Consequences:
+
+- The next semantic setter for that control is not suppressed as a no-op
+  duplicate, even if its value happens to match what was last requested, and
+  reliably reasserts the application's own intent.
+- `sync_feedback()` reasserts invalidated history the same way it does after
+  `invalidate_feedback_state()` or a reconnect.
+- A raw encoder ring-mode command also invalidates that encoder's display
+  history, mirroring the same hardware mode-redraw effect `set_encoder_ring_mode()`
+  compensates for (see [Send Feedback](#send-feedback)).
+- A raw fader position command also marks that fader's observation
+  non-current, exactly as a normal motor command does, so a stale observation
+  cannot suppress a later necessary command; desired value, observed value,
+  touch state, and owner are untouched.
+
+A failed raw send raises before any of this bookkeeping runs, so a command
+that was never actually transmitted never invalidates history. Mixing raw
+writes with setters therefore no longer requires a manual
+`invalidate_feedback_state()` workaround or a separate diagnostic session for
+these tracked controls; it remains good practice to keep raw motor
+experiments outside normal application flow so diagnostic traffic is easy to
+tell apart from real commands.

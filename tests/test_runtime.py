@@ -152,6 +152,25 @@ def test_connection_loss_during_send_preserves_desired_feedback() -> None:
     assert session.button_feedback_state(Button.PLAY).last_sent is ButtonLedState.BLINK
 
 
+def test_connection_loss_during_raw_send_recovers_like_a_semantic_send() -> None:
+    session, transport = ready_runtime_session([(24, 0), (31, 0)])
+    session.set_button_led(Button.PLAY, ButtonLedState.ON)
+    transport.send_failure = (
+        lambda message: isinstance(message, NoteOn),
+        TransportConnectionError("device disappeared during send"),
+    )
+
+    with pytest.raises(TransportConnectionError, match="during send"):
+        session.send(NoteOn(2, 38, 0))
+
+    assert session.state is SessionState.DISCONNECTED
+    assert session.button_feedback_state(Button.PLAY).desired is ButtonLedState.ON
+
+    session.reconnect()
+    assert session.state is SessionState.READY
+    assert session.button_feedback_state(Button.PLAY).last_sent is ButtonLedState.ON
+
+
 def test_connection_loss_during_receive_resets_live_fader_state() -> None:
     session, transport = ready_runtime_session([(24, 0), (31, 0)])
     transport.incoming.append(ControlChange(1, 101, 127))

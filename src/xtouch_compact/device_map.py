@@ -27,6 +27,7 @@ from enum import Enum
 from types import MappingProxyType
 
 from .controls import Button, Encoder, Fader, FootControl, Layer, MappedControl
+from .midi import ControlChange, NoteOff, NoteOn, ProgramChange, RawMidiMessage
 
 
 class MidiMessageType(Enum):
@@ -335,3 +336,46 @@ def _build_rx_control_index(
 RX_CONTROL_INDEX: Mapping[tuple[MappedControl, str], RxBinding] = (
     _build_rx_control_index(RX_BINDINGS)
 )
+
+
+def classify_rx_message(
+    message: RawMidiMessage, global_midi_channel: int
+) -> RxBinding | None:
+    """Return the RX binding a raw outbound message would address, if any.
+
+    Used only to identify which tracked feedback a diagnostic raw
+    ``send()`` affects, so its command history can be invalidated after
+    successful transmission -- never to route, rewrite, or reinterpret the
+    message itself. Matches strictly on message type, address number, and
+    the configured Global MIDI Channel; a message on another channel or at
+    an unmapped address returns ``None``. Layer selection (Program Change)
+    has no RX binding and is not covered here; see
+    :func:`matches_layer_program_change`.
+    """
+    if isinstance(message, (NoteOn, NoteOff)):
+        if message.midi_channel != global_midi_channel:
+            return None
+        address = MidiAddress(MidiMessageType.NOTE, message.note_number)
+    elif isinstance(message, ControlChange):
+        if message.midi_channel != global_midi_channel:
+            return None
+        address = MidiAddress(MidiMessageType.CONTROL_CHANGE, message.control_number)
+    else:
+        return None
+    return RX_INDEX.get(address)
+
+
+def matches_layer_program_change(
+    message: RawMidiMessage, global_midi_channel: int
+) -> bool:
+    """Return whether a raw message is a Program Change asserting a layer.
+
+    Layer selection has no ``RxBinding`` entry (see
+    :func:`classify_rx_message`), so it is matched independently against
+    :data:`PRESET_LAYER_VALUES` on the configured Global MIDI Channel.
+    """
+    return (
+        isinstance(message, ProgramChange)
+        and message.midi_channel == global_midi_channel
+        and message.program_number in PRESET_LAYER_VALUES.values()
+    )

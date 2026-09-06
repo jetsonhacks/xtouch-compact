@@ -8,7 +8,11 @@ from enum import Enum
 
 from .controls import Button, Encoder, Fader, FootControl, Layer
 from .decoder import InboundDecoder
-from .device_map import RX_CONTROL_INDEX
+from .device_map import (
+    RX_CONTROL_INDEX,
+    classify_rx_message,
+    matches_layer_program_change,
+)
 from .errors import LifecycleError, SessionConfigurationError, TransportConnectionError
 from .events import (
     FaderPositionReported,
@@ -24,7 +28,7 @@ from .feedback import (
     StatusLedState,
 )
 from .feedback_encoder import SemanticFeedbackEncoder
-from .midi import RawMidiMessage
+from .midi import ControlChange, ProgramChange, RawMidiMessage
 from .surface_state import (
     ButtonFeedbackState,
     EncoderFeedbackState,
@@ -233,9 +237,49 @@ class XTouchCompactSession:
         return ReceivedInput(message, physical_event)
 
     def send(self, message: RawMidiMessage) -> None:
-        """Send one raw typed MIDI message after startup initialization."""
+        """Send one raw typed MIDI message after startup initialization.
+
+        This is a diagnostic escape hatch, not a semantic setter: unlike
+        :meth:`set_button_led` and its siblings, it is never deduplicated,
+        never defers to fader touch ownership, and never changes any
+        *desired* feedback value. Desired state, touch ownership, and
+        observed fader positions are exactly what the last semantic call
+        left them; only host-controlled *command history* (the "last-sent"
+        bookkeeping used to suppress duplicate output) can be affected, and
+        only after the transport has accepted the message.
+
+        Raw output is treated as a diagnostic override: once transmission
+        succeeds, if the message's type, address, and channel match a
+        tracked RX binding on the configured Global MIDI Channel -- a
+        button LED, an encoder ring mode or display, the foot-switch
+        status LED, layer selection, or a fader position -- this session
+        invalidates (marks unknown), rather than overwrites, the affected
+        last-sent history. It never touches unrelated controls, traffic on
+        another channel, or unmapped addresses. Consequences:
+
+        - A subsequent semantic setter for the same control is no longer
+          suppressed as a no-op duplicate, even if its value happens to
+          match what was last requested, and reliably reasserts the
+          application's desired value.
+        - :meth:`sync_feedback` reassembles from invalidated history the
+          same way it does after :meth:`invalidate_feedback_state` or a
+          reconnect.
+        - Selecting a raw encoder ring mode additionally invalidates that
+          encoder's display history, matching the hardware's own
+          mode-redraw behavior (see :meth:`set_encoder_ring_mode`).
+        - A raw fader position command additionally marks that fader's
+          observation non-current, exactly as a normal motor command does,
+          so a stale observation cannot suppress a later necessary motor
+          command; the fader's desired value, observed value, touch state,
+          and owner are untouched.
+
+        A failed send raises before any bookkeeping changes, so a
+        transport failure never invalidates history for a command that was
+        never actually transmitted.
+        """
         self._require_ready()
         self._send_transport(message)
+        self._invalidate_raw_feedback_effect(message)
 
     def set_fader(self, fader: Fader, value: int) -> None:
         """Set the application-desired position, subject to touch ownership.
@@ -453,8 +497,43 @@ class XTouchCompactSession:
             self._send_fader_command(event.fader, command_value)
 
     def _send_fader_command(self, fader: Fader, value: int) -> None:
-        self.send(self._feedback_encoder.fader(fader, value))
+        # Uses the internal transport send, not the public send(): this is
+        # semantic feedback bookkeeping, not diagnostic raw output, and
+        # must not run through _invalidate_raw_feedback_effect.
+        self._send_transport(self._feedback_encoder.fader(fader, value))
         self._faders.motor_command_sent(fader, value)
+
+    def _invalidate_raw_feedback_effect(self, message: RawMidiMessage) -> None:
+        """Invalidate tracked command history a successful raw send affects.
+
+        See :meth:`send` for the full contract this implements.
+        """
+        channel = self._feedback_encoder.global_midi_channel
+        if isinstance(message, ProgramChange):
+            if matches_layer_program_change(message, channel):
+                self._surface.raw_layer_sent()
+            return
+        binding = classify_rx_message(message, channel)
+        if binding is None:
+            return
+        if binding.operation == "led" and isinstance(binding.control, Button):
+            self._surface.raw_button_led_sent(binding.control)
+        elif binding.operation == "ring_behavior" and isinstance(
+            binding.control, Encoder
+        ):
+            self._surface.raw_encoder_mode_sent(binding.control)
+        elif binding.operation == "ring_value" and isinstance(binding.control, Encoder):
+            self._surface.raw_encoder_display_sent(binding.control)
+        elif binding.operation == "status_led" and isinstance(
+            binding.control, FootControl
+        ):
+            self._surface.raw_status_sent(binding.control)
+        elif (
+            binding.operation == "position"
+            and isinstance(binding.control, Fader)
+            and isinstance(message, ControlChange)
+        ):
+            self._faders.motor_command_sent(binding.control, message.value)
 
     def _require_ready(self) -> None:
         if self._state is SessionState.READY:

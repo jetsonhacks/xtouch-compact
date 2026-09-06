@@ -46,7 +46,7 @@ factory profile, represented in `xtouch_compact.device_map`.
 | `close()` | Release transport resources. Idempotent. |
 | `receive(timeout=None)` | Next physical event, or `None`. `None` blocks; `0` polls; a positive value waits that many seconds. Also returns `None` when a received message does not decode into a typed event. |
 | `receive_input(timeout=None)` | Raw message plus optional event. Same timeout contract as `receive()`. Not a lossless capture: the ALSA transport itself returns `None` for an ALSA event type it does not convert, indistinguishable here from a timeout. |
-| `send(message)` | Raw diagnostic output; bypasses ownership and feedback tracking. See [usage limitations](usage.md#application-owned-bindings). |
+| `send(message)` | Raw diagnostic output; bypasses deduplication and touch ownership on the way out, and invalidates (never overwrites) matching tracked command history after a successful send. See [Application-Owned Bindings](usage.md#application-owned-bindings). |
 | `set_fader(fader, value)` | Request a motor position, subject to touch ownership. |
 | `fader_state(fader)` | Immutable fader snapshot. |
 | `set_button_led(button, state)` | Assignable button LED: off, on, or blink. |

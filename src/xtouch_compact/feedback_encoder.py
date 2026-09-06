@@ -32,6 +32,11 @@ class SemanticFeedbackEncoder:
     def __init__(self, *, global_midi_channel: int) -> None:
         self._global_midi_channel = global_midi_channel
 
+    @property
+    def global_midi_channel(self) -> int:
+        """The configured RX channel, for matching raw diagnostic output."""
+        return self._global_midi_channel
+
     def fader(self, fader: Fader, value: int) -> ControlChange:
         binding = self._rx_binding(fader, "position", MidiMessageType.CONTROL_CHANGE)
         return self._control_change(binding, value)

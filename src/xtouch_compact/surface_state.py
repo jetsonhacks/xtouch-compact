@@ -218,6 +218,49 @@ class SurfaceStateController:
             self.status_state(control), last_sent=state
         )
 
+    def raw_button_led_sent(self, button: Button) -> None:
+        """Invalidate one button LED's last-sent state after raw output.
+
+        Called after a successful diagnostic ``send()`` whose address
+        matches this button's LED RX binding. Desired state is untouched;
+        only the command-history bookkeeping used for deduplication is
+        marked unknown, so the next matching-value semantic request is not
+        suppressed as a no-op duplicate of the raw traffic.
+        """
+        if button not in self._buttons:
+            return
+        self._buttons[button] = replace(self.button_state(button), last_sent=None)
+
+    def raw_encoder_mode_sent(self, encoder: Encoder) -> None:
+        """Invalidate one encoder's ring-mode (and display) history.
+
+        A raw ring-mode command has the same hardware side effect as
+        :meth:`encoder_mode_sent`: it redraws the ring from the local
+        encoder value and replaces any remotely assigned display. Both
+        histories are therefore invalidated together, not just the mode.
+        """
+        self._encoders[encoder] = replace(
+            self.encoder_state(encoder),
+            last_sent_mode=None,
+            last_sent_display=None,
+        )
+
+    def raw_encoder_display_sent(self, encoder: Encoder) -> None:
+        """Invalidate one encoder's ring-display last-sent history."""
+        self._encoders[encoder] = replace(
+            self.encoder_state(encoder), last_sent_display=None
+        )
+
+    def raw_status_sent(self, control: FootControl) -> None:
+        """Invalidate one status LED's last-sent history after raw output."""
+        if control not in self._status_leds:
+            return
+        self._status_leds[control] = replace(self.status_state(control), last_sent=None)
+
+    def raw_layer_sent(self) -> None:
+        """Invalidate layer last-sent history after a raw Program Change."""
+        self._layer = replace(self._layer, last_sent=None)
+
     def invalidate_last_sent(self) -> None:
         self._buttons = {
             button: replace(state, last_sent=None)
