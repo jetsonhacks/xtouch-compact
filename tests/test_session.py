@@ -2,6 +2,7 @@ import pytest
 
 from tests.helpers import FakeTransport, SessionFactory
 from xtouch_compact import (
+    Button,
     ButtonPressed,
     ControlChange,
     Layer,
@@ -38,6 +39,32 @@ def test_receive_pipeline_decodes_message_and_preserves_raw_input(
     assert received is not None
     assert received.message == NoteOn(1, 54, 127)
     assert isinstance(received.physical_event, ButtonPressed)
+    assert received.physical_event.button is Button.PLAY
+
+
+def test_receive_returns_the_decoded_event(build_session: SessionFactory) -> None:
+    session, _ = build_session(FakeTransport([NoteOn(1, 54, 127)]), ready=True)
+    event = session.receive()
+    assert isinstance(event, ButtonPressed)
+    assert event.button is Button.PLAY
+
+
+@pytest.mark.parametrize("method", ["receive", "receive_input"])
+def test_receive_returns_none_when_transport_has_no_message(
+    ready_session: tuple[XTouchCompactSession, FakeTransport], method: str
+) -> None:
+    session, _ = ready_session
+    assert getattr(session, method)(timeout=0) is None
+
+
+def test_initialize_twice_rejects_without_sending(
+    ready_session: tuple[XTouchCompactSession, FakeTransport],
+) -> None:
+    session, transport = ready_session
+    with pytest.raises(LifecycleError, match="unasserted"):
+        session.initialize()
+    assert session.state is SessionState.READY
+    assert transport.sent == []
 
 
 def test_decoder_none_does_not_fail_receive_pipeline(
@@ -152,3 +179,63 @@ def test_ready_methods_report_disconnected_versus_unasserted(
     device_session.connect()
     with pytest.raises(LifecycleError, match="unasserted"):
         device_session.receive()
+
+
+def test_double_connect_is_a_lifecycle_error(build_session: SessionFactory) -> None:
+    device_session, _ = build_session()
+    device_session.connect()
+    with pytest.raises(LifecycleError):
+        device_session.connect()
+
+
+def test_close_is_idempotent_and_session_is_reusable(
+    build_session: SessionFactory,
+) -> None:
+    device_session, _ = build_session()
+    device_session.connect()
+    device_session.initialize()
+    device_session.close()
+    device_session.close()
+    assert device_session.state is SessionState.DISCONNECTED
+    device_session.connect()
+    device_session.initialize()
+    assert device_session.state is SessionState.READY
+
+
+def test_context_manager_closes_on_exception(build_session: SessionFactory) -> None:
+    device_session, _ = build_session()
+    with pytest.raises(ValueError, match="boom"), device_session:
+        raise ValueError("boom")
+    assert device_session.state is SessionState.DISCONNECTED
+
+
+def test_context_manager_closes_when_initialization_fails(
+    build_session: SessionFactory,
+) -> None:
+    class InitializationFailureTransport(FakeTransport):
+        def send(self, message: object) -> None:
+            raise ValueError("initialization failed")
+
+    device_session, transport = build_session(InitializationFailureTransport())
+
+    with pytest.raises(ValueError, match="initialization failed"), device_session:
+        pass
+
+    assert device_session.state is SessionState.DISCONNECTED
+    assert transport.connected is False
+
+
+def test_context_manager_connect_interrupt_leaves_disconnected(
+    build_session: SessionFactory,
+) -> None:
+    class InterruptTransport(FakeTransport):
+        def connect(self) -> object:
+            raise KeyboardInterrupt
+
+    device_session, transport = build_session(InterruptTransport())
+
+    with pytest.raises(KeyboardInterrupt), device_session:
+        pass
+
+    assert device_session.state is SessionState.DISCONNECTED
+    assert transport.connected is False

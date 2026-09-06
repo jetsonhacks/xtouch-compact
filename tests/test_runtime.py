@@ -2,7 +2,6 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.helpers import make_session
 from xtouch_compact import (
     Button,
     ButtonLedState,
@@ -24,6 +23,8 @@ from xtouch_compact import (
 
 
 class RuntimeTransport:
+    """Instrument session recovery; queued identities do not test ALSA discovery."""
+
     def __init__(self, connect_results: list[object]) -> None:
         self.connect_results = list(connect_results)
         self.connected = False
@@ -67,15 +68,11 @@ class RuntimeTransport:
         self.endpoint = None
 
 
-def runtime_session(transport: RuntimeTransport) -> XTouchCompactSession:
-    return make_session(transport)
-
-
 def ready_runtime_session(
     connect_results: list[object] | None = None,
 ) -> tuple[XTouchCompactSession, RuntimeTransport]:
     transport = RuntimeTransport(connect_results or [(24, 0)])
-    session = runtime_session(transport)
+    session = XTouchCompactSession(transport, global_midi_channel=2)
     session.connect()
     session.initialize()
     transport.actions.clear()
@@ -86,7 +83,7 @@ def ready_runtime_session(
 def test_device_absent_at_startup_leaves_session_retryable() -> None:
     missing = DiscoveryError("no matching device")
     transport = RuntimeTransport([missing, (31, 0)])
-    session = runtime_session(transport)
+    session = XTouchCompactSession(transport, global_midi_channel=2)
 
     with pytest.raises(DiscoveryError, match="no matching"):
         session.connect()
@@ -103,7 +100,7 @@ def test_device_absent_at_startup_leaves_session_retryable() -> None:
 
 def test_keyboard_interrupt_during_connect_leaves_session_retryable() -> None:
     transport = RuntimeTransport([KeyboardInterrupt(), (31, 0)])
-    session = runtime_session(transport)
+    session = XTouchCompactSession(transport, global_midi_channel=2)
 
     with pytest.raises(KeyboardInterrupt):
         session.connect()

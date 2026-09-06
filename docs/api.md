@@ -1,7 +1,7 @@
 # API
 
-Import from `xtouch_compact`. Names not listed here, and modules prefixed
-with an underscore, are not part of the supported contract.
+Import supported names from `xtouch_compact`. This page defines the public
+contract; other implementation names, including `device_map`, are internal.
 
 This is a 0.1.0 interface. Exact semantic-version guarantees remain flexible
 until 1.0. Code written against these exports should not need a broad rewrite
@@ -22,7 +22,7 @@ constructed -> connect() -> STARTUP_LAYER_UNASSERTED
             -> close() -> DISCONNECTED
 ```
 
-`XTouchCompactSession.open(*, global_midi_channel, startup_layer=Layer.A, port_name=None)`
+`XTouchCompactSession.open(*, global_midi_channel, startup_layer=Layer.A, port_name=None, transport=None)`
 constructs a disconnected session with `AlsaSequencerTransport` and the
 fixed factory device map. It does not open ALSA. `port_name` is the
 optional ALSA port-name filter. Pass `transport` to skip the default
@@ -42,11 +42,11 @@ factory profile, represented in `xtouch_compact.device_map`.
 | `open(...)` | Class method: default ALSA transport and fixed factory device map. Does not connect. |
 | `connect()` | Open the transport. Does not yet publish semantic input. |
 | `initialize()` | Assert the desired layer and enter `READY`. |
-| `reconnect()` | Rediscover, reconnect, assert layer, restore non-fader feedback. |
+| `reconnect()` | Reconnect the transport, assert layer, restore non-fader feedback. The default ALSA transport rediscovers the endpoint. |
 | `close()` | Release transport resources. Idempotent. |
 | `receive(timeout=None)` | Next physical event, or `None`. `None` blocks; `0` polls; a positive value waits that many seconds. Also returns `None` when a received message does not decode into a typed event. |
 | `receive_input(timeout=None)` | Raw message plus optional event. Same timeout contract as `receive()`. Not a lossless capture: the ALSA transport itself returns `None` for an ALSA event type it does not convert, indistinguishable here from a timeout. |
-| `send(message)` | Send one raw typed MIDI message. Diagnostic. |
+| `send(message)` | Raw diagnostic output; bypasses ownership and feedback tracking. See [usage limitations](usage.md#application-owned-bindings). |
 | `set_fader(fader, value)` | Request a motor position, subject to touch ownership. |
 | `fader_state(fader)` | Immutable fader snapshot. |
 | `set_button_led(button, state)` | Assignable button LED: off, on, or blink. |
@@ -120,7 +120,7 @@ Positioned displays require an integer ring segment position from 1 through
 | Type | Contents |
 |---|---|
 | `FaderOwner` | `APPLICATION`, `HUMAN` |
-| `FaderState` | `desired_value`, `observed_value`, `touched`, `owner`, `last_commanded_value` |
+| `FaderState` | `desired_value`, `observed_value`, `observation_is_current`, `touched`, `owner`, `last_commanded_value` |
 | `ButtonFeedbackState` | `button`, `desired`, `last_sent` |
 | `EncoderFeedbackState` | `encoder`, desired and last-sent mode and display |
 | `LayerFeedbackState` | `desired`, `last_sent` |
@@ -129,6 +129,12 @@ Positioned displays require an integer ring segment position from 1 through
 
 Snapshots are immutable. Last-sent means the last command the transport
 accepted. It is not confirmation that the hardware applied the command.
+
+`observation_is_current` starts false, becomes true on a decoded position
+report, and becomes false after a successfully sent motor command or reset.
+Touch alone does not refresh it. When false, the stored observation is history;
+reconciliation uses command history instead. See the
+[fader ownership rules](usage.md#fader-ownership).
 
 ## Errors
 
@@ -145,8 +151,10 @@ XTouchCompactError
 └── UnsupportedOperationError
 ```
 
-Catch the narrow subclass, or `XTouchCompactError` for any library failure.
-Application code should not catch ALSA-specific exceptions.
+Catch the narrow subclass, or `XTouchCompactError` for library lifecycle,
+discovery, transport, and unsupported-operation failures. Invalid argument
+types and numeric ranges can also raise `TypeError` or `ValueError`.
+ALSA I/O failures are wrapped by the transport.
 
 ## Device Map
 

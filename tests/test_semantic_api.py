@@ -15,13 +15,10 @@ from xtouch_compact import (
     NoteOn,
     ProgramChange,
     StatusLedState,
+    UnsupportedOperationError,
     XTouchCompactSession,
 )
-from xtouch_compact.device_map import (
-    ENCODER_RING_MODE_VALUES,
-    PRESET_LAYER_VALUES,
-    RX_CONTROL_INDEX,
-)
+from xtouch_compact.device_map import RX_CONTROL_INDEX
 
 
 @pytest.mark.parametrize("fader", list(Fader))
@@ -109,20 +106,30 @@ def test_layer_indicators_are_not_assignable_button_leds(
 
 
 @pytest.mark.parametrize("encoder", list(Encoder))
-@pytest.mark.parametrize("mode", list(EncoderRingMode))
+@pytest.mark.parametrize(
+    ("mode", "encoded"),
+    [
+        (EncoderRingMode.SINGLE, 0),
+        (EncoderRingMode.PAN, 1),
+        (EncoderRingMode.FAN, 2),
+        (EncoderRingMode.SPREAD, 3),
+        (EncoderRingMode.TRIM, 4),
+    ],
+)
 def test_every_encoder_supports_every_ring_mode_from_its_rx_binding(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
     encoder: Encoder,
     mode: EncoderRingMode,
+    encoded: int,
 ) -> None:
+    # Quick Start Guide V6.0, RX MIDI DATA p. 32. Values are independent of
+    # the runtime map; address routing is separately checked in test_device_map.
     device, transport = ready_session
     binding = RX_CONTROL_INDEX[(encoder, "ring_behavior")]
 
     device.set_encoder_ring_mode(encoder, mode)
 
-    assert transport.sent == [
-        ControlChange(2, binding.address.number, ENCODER_RING_MODE_VALUES[mode.value])
-    ]
+    assert transport.sent == [ControlChange(2, binding.address.number, encoded)]
 
 
 @pytest.mark.parametrize("encoder", list(Encoder))
@@ -171,7 +178,9 @@ def test_encoder_ring_display_rejects_invalid_positions_before_transport(
 ) -> None:
     device, transport = ready_session
 
-    with pytest.raises(ValueError, match="position must be from 1 through 13"):
+    with pytest.raises(
+        UnsupportedOperationError, match="position must be from 1 through 13"
+    ):
         device.set_encoder_ring_value(
             Encoder.CHANNEL_1, EncoderRingDisplay.at(position)
         )
@@ -193,10 +202,8 @@ def test_layer_selection_uses_same_device_map_mapping_as_initialization(
     device.initialize()
     device.select_layer(Layer.A)
 
-    assert transport.sent == [
-        ProgramChange(7, PRESET_LAYER_VALUES[Layer.B.value]),
-        ProgramChange(7, PRESET_LAYER_VALUES[Layer.A.value]),
-    ]
+    # Quick Start Guide V6.0 p. 32: B=1, A=0 on the configured RX channel.
+    assert transport.sent == [ProgramChange(7, 1), ProgramChange(7, 0)]
 
 
 @pytest.mark.parametrize(

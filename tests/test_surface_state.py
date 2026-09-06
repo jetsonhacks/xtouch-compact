@@ -19,8 +19,24 @@ from xtouch_compact import (
     NoteOn,
     ProgramChange,
     StatusLedState,
+    UnsupportedOperationError,
     XTouchCompactSession,
 )
+
+
+@pytest.mark.parametrize(
+    ("inspect", "control"),
+    [
+        ("button_feedback_state", Button.LAYER_A),
+        ("status_feedback_state", FootControl.EXPRESSION_PEDAL),
+    ],
+)
+def test_unsupported_state_inspection_uses_public_error(
+    build_session: SessionFactory, inspect: str, control: object
+) -> None:
+    session, _ = build_session()
+    with pytest.raises(UnsupportedOperationError):
+        getattr(session, inspect)(control)
 
 
 def test_initial_snapshot_covers_only_supported_feedback(
@@ -491,6 +507,8 @@ def test_public_snapshots_are_immutable(
         snapshot.layer.desired = Layer.B  # type: ignore[misc]
     with pytest.raises(TypeError):
         snapshot.buttons[0] = snapshot.buttons[1]  # type: ignore[index]
+    with pytest.raises(FrozenInstanceError):
+        snapshot.status_leds[0].desired = StatusLedState.ON  # type: ignore[misc]
 
     assert session.layer_feedback_state().desired is Layer.A
 

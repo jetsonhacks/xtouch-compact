@@ -42,11 +42,11 @@ These limits are part of the supported contract. Dated measurement notes
 are in [hardware-observations.md](hardware-observations.md). The extracted
 Standard MIDI map is [xtouch-compact-midi.md](xtouch-compact-midi.md).
 
-**Faders.** Host commands use 0–127. Touch overrides the motor. The session
-suppresses motor commands while a fader is touched and sends a differing
-desired value once on release. Ordinary host-driven travel does not produce a
-reproducible position echo. Incoming position messages are still decoded; the
-session does not drop a report because it matches a recent command.
+**Faders.** Host commands use 0–127. Physical touch overrides the motor, and
+ordinary host-driven travel does not produce a reproducible position echo.
+The session's software ownership follows processed input; see
+[Fader Ownership](usage.md#fader-ownership) for input servicing and
+reconciliation rules.
 
 **Encoder rings.** A ring-mode command redraws the ring from the local
 encoder value and replaces a remotely assigned display. After a successful
@@ -79,8 +79,8 @@ button in the group, not an independently measured result for every
 transport button; other button groups are not given that treatment because
 no equivalent observation exists for them.
 
-**Disconnect.** A timed `receive()` returning `None` means no supported
-event arrived in that interval — it is not proof that the USB device is
+**Disconnect.** A `receive()` result of `None` can mean timeout or unsupported
+traffic — it is not proof that the USB device is
 gone, and the library does not poll or ping the device to check. Liveness
 and device-loss policy are the application's responsibility; the library
 does not provide a safety-rated presence detector, watchdog, or
@@ -133,8 +133,11 @@ The script walks through, in order:
 7. **Receive loop.** Prints decoded events while you move the fader, turn
    encoder 1, and press PLAY, then asks whether all three produced events.
 
-The script turns everything back off on exit, including after a failure.
-Each stage records a pass/fail/skip; a summary prints at the end. A clean
+On normal exit, the script turns button LEDs and encoder rings off. Cleanup
+also attempts this after a failure, but a lost connection can prevent those
+commands from reaching the device. Faders stay at their last position.
+Each completed stage records a pass/fail/skip; a summary prints after normal
+completion. A clean
 run through all stages is first-hour proof that the physical device, the
 configured channel, and the host kernel's ALSA Sequencer support are all
 correct before you build anything on top.

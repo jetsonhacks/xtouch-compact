@@ -40,83 +40,40 @@ from xtouch_compact.device_map import (
 )
 
 
-def _tx_bindings(interaction: Interaction) -> list:
-    return [binding for binding in TX_BINDINGS if binding.interaction is interaction]
+@pytest.mark.parametrize("layer", list(Layer))
+@pytest.mark.parametrize(
+    ("interaction", "controls"),
+    [
+        (Interaction.FADER_POSITION, set(Fader)),
+        (Interaction.FADER_TOUCH, set(Fader)),
+        (Interaction.ENCODER_TURN, set(Encoder)),
+        (Interaction.ENCODER_PUSH, set(Encoder)),
+        (Interaction.BUTTON, set(Button) - {Button.LAYER_A, Button.LAYER_B}),
+        (Interaction.FOOT_CONTROL, set(FootControl)),
+    ],
+)
+def test_tx_completeness(layer, interaction, controls) -> None:
+    bindings = [
+        b for b in TX_BINDINGS if b.layer is layer and b.interaction is interaction
+    ]
+    assert {b.control for b in bindings} == controls
+    assert len(bindings) == len(controls)
 
 
-class TestTxCompleteness:
-    def test_every_fader_has_position_and_touch_on_both_layers(self) -> None:
-        for layer in Layer:
-            controls = {
-                binding.control
-                for binding in _tx_bindings(Interaction.FADER_POSITION)
-                if binding.layer is layer
-            }
-            assert controls == set(Fader)
-            controls = {
-                binding.control
-                for binding in _tx_bindings(Interaction.FADER_TOUCH)
-                if binding.layer is layer
-            }
-            assert controls == set(Fader)
-
-    def test_every_encoder_has_turn_and_push_on_both_layers(self) -> None:
-        for layer in Layer:
-            controls = {
-                binding.control
-                for binding in _tx_bindings(Interaction.ENCODER_TURN)
-                if binding.layer is layer
-            }
-            assert controls == set(Encoder)
-            controls = {
-                binding.control
-                for binding in _tx_bindings(Interaction.ENCODER_PUSH)
-                if binding.layer is layer
-            }
-            assert controls == set(Encoder)
-
-    def test_every_assignable_button_is_mapped_on_both_layers(self) -> None:
-        for layer in Layer:
-            controls = {
-                binding.control
-                for binding in _tx_bindings(Interaction.BUTTON)
-                if binding.layer is layer
-            }
-            assert controls == set(ASSIGNABLE_BUTTONS)
-        assert Button.LAYER_A not in ASSIGNABLE_BUTTONS
-        assert Button.LAYER_B not in ASSIGNABLE_BUTTONS
-
-    def test_both_foot_controls_are_mapped_on_both_layers(self) -> None:
-        for layer in Layer:
-            controls = {
-                binding.control
-                for binding in _tx_bindings(Interaction.FOOT_CONTROL)
-                if binding.layer is layer
-            }
-            assert controls == set(FootControl)
-
-
-class TestRxCompleteness:
-    def test_every_fader_has_a_position_rx_mapping(self) -> None:
-        for fader in Fader:
-            assert (fader, "position") in RX_CONTROL_INDEX
-
-    def test_every_assignable_button_has_an_led_rx_mapping(self) -> None:
-        for button in ASSIGNABLE_BUTTONS:
-            assert (button, "led") in RX_CONTROL_INDEX
-        for button in (Button.LAYER_A, Button.LAYER_B):
-            assert (button, "led") not in RX_CONTROL_INDEX
-
-    def test_every_encoder_has_ring_behavior_and_ring_value_rx_mappings(self) -> None:
-        for encoder in Encoder:
-            assert (encoder, "ring_behavior") in RX_CONTROL_INDEX
-            assert (encoder, "ring_value") in RX_CONTROL_INDEX
-
-    def test_foot_switch_has_a_status_led_rx_mapping_but_expression_pedal_does_not(
-        self,
-    ) -> None:
-        assert (FootControl.FOOT_SWITCH, "status_led") in RX_CONTROL_INDEX
-        assert (FootControl.EXPRESSION_PEDAL, "status_led") not in RX_CONTROL_INDEX
+def test_rx_completeness() -> None:
+    buttons = set(Button) - {Button.LAYER_A, Button.LAYER_B}
+    assert set(ASSIGNABLE_BUTTONS) == buttons
+    expected = (
+        {(fader, "position") for fader in Fader}
+        | {(button, "led") for button in buttons}
+        | {
+            (encoder, op)
+            for encoder in Encoder
+            for op in ("ring_behavior", "ring_value")
+        }
+        | {(FootControl.FOOT_SWITCH, "status_led")}
+    )
+    assert set(RX_CONTROL_INDEX) == expected
 
 
 class TestAddressRanges:
@@ -221,74 +178,104 @@ class TestAmbiguityGuards:
             _build_rx_control_index(duplicate)
 
 
-class TestLiteralProtocolVectors:
-    """Values copied directly from the manufacturer guide, independent of the map."""
-
-    def test_layer_a_fader_1_position_and_touch(self) -> None:
-        binding = RX_CONTROL_INDEX[(Fader.CHANNEL_1, "position")]
-        assert binding.address == MidiAddress(MidiMessageType.CONTROL_CHANGE, 1)
-        tx = [
+# Literal first/last addresses from Quick Start Guide V6.0 pp. 29–30.
+# These expectations do not read the runtime's bases, enum order, or YAML.
+@pytest.mark.parametrize("layer", [Layer.A, Layer.B])
+@pytest.mark.parametrize(
+    ("interaction", "first", "last", "a_numbers", "b_numbers", "message_type"),
+    [
+        (
+            "fader_position",
+            Fader.CHANNEL_1,
+            Fader.MAIN,
+            (1, 9),
+            (28, 36),
+            "control_change",
+        ),
+        (
+            "fader_touch",
+            Fader.CHANNEL_1,
+            Fader.MAIN,
+            (101, 109),
+            (111, 119),
+            "control_change",
+        ),
+        (
+            "encoder_turn",
+            Encoder.CHANNEL_1,
+            Encoder.POSITION_16,
+            (10, 25),
+            (37, 52),
+            "control_change",
+        ),
+        (
+            "encoder_push",
+            Encoder.CHANNEL_1,
+            Encoder.POSITION_16,
+            (0, 15),
+            (55, 70),
+            "note",
+        ),
+        ("button", Button.UPPER_TOP_1, Button.PLAY, (16, 54), (71, 109), "note"),
+        (
+            "foot_control",
+            FootControl.EXPRESSION_PEDAL,
+            FootControl.FOOT_SWITCH,
+            (26, 27),
+            (63, 64),
+            "control_change",
+        ),
+    ],
+)
+def test_tx_protocol_boundaries(
+    layer, interaction, first, last, a_numbers, b_numbers, message_type
+) -> None:
+    numbers = a_numbers if layer is Layer.A else b_numbers
+    for control, number in zip((first, last), numbers, strict=True):
+        bindings = [
             b
             for b in TX_BINDINGS
-            if b.layer is Layer.A
-            and b.control is Fader.CHANNEL_1
-            and b.interaction is Interaction.FADER_POSITION
-        ][0]
-        assert tx.address.number == 1
-        touch = [
-            b
-            for b in TX_BINDINGS
-            if b.layer is Layer.A
-            and b.control is Fader.CHANNEL_1
-            and b.interaction is Interaction.FADER_TOUCH
-        ][0]
-        assert touch.address.number == 101
+            if b.layer is layer
+            and b.control is control
+            and b.interaction is Interaction(interaction)
+        ]
+        assert len(bindings) == 1
+        binding = bindings[0]
+        assert binding.address == MidiAddress(MidiMessageType(message_type), number, 1)
+        assert binding.midi_channel == 1
 
-    def test_layer_b_master_fader_position_and_touch(self) -> None:
-        tx = [
-            b
-            for b in TX_BINDINGS
-            if b.layer is Layer.B
-            and b.control is Fader.MAIN
-            and b.interaction is Interaction.FADER_POSITION
-        ][0]
-        assert tx.address.number == 36
-        touch = [
-            b
-            for b in TX_BINDINGS
-            if b.layer is Layer.B
-            and b.control is Fader.MAIN
-            and b.interaction is Interaction.FADER_TOUCH
-        ][0]
-        assert touch.address.number == 119
 
-    def test_layer_b_encoder_16_push_note(self) -> None:
-        tx = [
-            b
-            for b in TX_BINDINGS
-            if b.layer is Layer.B
-            and b.control is Encoder.POSITION_16
-            and b.interaction is Interaction.ENCODER_PUSH
-        ][0]
-        assert tx.address.number == 70
-
-    def test_layer_b_last_button_note(self) -> None:
-        tx = [
-            b
-            for b in TX_BINDINGS
-            if b.layer is Layer.B
-            and b.control is Button.PLAY
-            and b.interaction is Interaction.BUTTON
-        ][0]
-        assert tx.address.number == 109
-
-    def test_button_led_numbers_span_zero_to_thirty_eight(self) -> None:
-        numbers = {
-            RX_CONTROL_INDEX[(button, "led")].address.number
-            for button in ASSIGNABLE_BUTTONS
-        }
-        assert numbers == set(range(39))
-
-    def test_foot_switch_status_led_number_is_forty_two(self) -> None:
-        binding = RX_CONTROL_INDEX[(FootControl.FOOT_SWITCH, "status_led")]
-        assert binding.address.number == 42
+# RX MIDI DATA, p. 32. Button RX notes differ from TX notes above.
+@pytest.mark.parametrize(
+    ("operation", "first", "last", "numbers", "message_type"),
+    [
+        ("position", Fader.CHANNEL_1, Fader.MAIN, (1, 9), "control_change"),
+        ("led", Button.UPPER_TOP_1, Button.PLAY, (0, 38), "note"),
+        (
+            "ring_behavior",
+            Encoder.CHANNEL_1,
+            Encoder.POSITION_16,
+            (10, 25),
+            "control_change",
+        ),
+        (
+            "ring_value",
+            Encoder.CHANNEL_1,
+            Encoder.POSITION_16,
+            (26, 41),
+            "control_change",
+        ),
+        (
+            "status_led",
+            FootControl.FOOT_SWITCH,
+            FootControl.FOOT_SWITCH,
+            (42, 42),
+            "control_change",
+        ),
+    ],
+)
+def test_rx_protocol_boundaries(operation, first, last, numbers, message_type) -> None:
+    for control, number in zip((first, last), numbers, strict=True):
+        assert RX_CONTROL_INDEX[(control, operation)].address == MidiAddress(
+            MidiMessageType(message_type), number
+        )

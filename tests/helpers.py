@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 
 from xtouch_compact import Layer, XTouchCompactSession
 
-SPEC_PATH = Path(__file__).resolve().parents[1] / "specs" / "xtouch-compact-midi.yaml"
-
 
 class SendFailure(RuntimeError):
-    """Raised by :class:`FakeTransport` when a test asks the next send to fail."""
+    """Generic send rejection used to test commit-after-send ordering.
+
+    This intentionally does not model device loss. Production connection-loss
+    recovery is exercised with TransportConnectionError in test_runtime.py.
+    """
 
 
 class FakeTransport:
@@ -42,20 +43,6 @@ class FakeTransport:
         self.connected = False
 
 
-def make_session(
-    transport: object,
-    *,
-    global_midi_channel: int = 2,
-    startup_layer: Layer = Layer.A,
-) -> XTouchCompactSession:
-    """Construct a session around an already-created test transport."""
-    return XTouchCompactSession(
-        transport,
-        global_midi_channel=global_midi_channel,
-        startup_layer=startup_layer,
-    )
-
-
 def make_fake_session(
     transport: FakeTransport | None = None,
     *,
@@ -66,7 +53,7 @@ def make_fake_session(
     """Return a session and its fake transport, optionally already ``READY``."""
     if transport is None:
         transport = FakeTransport()
-    session = make_session(
+    session = XTouchCompactSession(
         transport,
         global_midi_channel=global_midi_channel,
         startup_layer=startup_layer,

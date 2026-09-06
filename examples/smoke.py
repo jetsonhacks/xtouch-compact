@@ -59,7 +59,7 @@ def reset_surface(session: XTouchCompactSession) -> None:
     """
     for button in Button:
         if button in (Button.LAYER_A, Button.LAYER_B):
-            continue  # no LED RX binding; layer selection has no output LED
+            continue  # layer indicators have no independent LED RX binding
         session.set_button_led(button, ButtonLedState.OFF)
     for encoder in Encoder:
         session.set_encoder_ring_value(encoder, EncoderRingDisplay.off())

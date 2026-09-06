@@ -172,7 +172,8 @@ class XTouchCompactSession:
         """Close, rediscover, reconnect, reassert layer, and restore feedback.
 
         ``reconnect()`` is a single synchronous transaction: it (1) performs
-        fresh ALSA endpoint discovery, (2) establishes a fresh transport
+        fresh endpoint discovery when using the default ALSA transport,
+        (2) establishes a fresh transport
         connection, (3) performs the mandatory startup layer assertion, and
         (4) restores desired surface feedback (button LEDs, encoder ring
         modes and displays, layer, and the foot-switch status LED) through
@@ -215,8 +216,9 @@ class XTouchCompactSession:
         """Receive one raw MIDI message alongside its decoded event.
 
         Requires ``READY``. ``timeout`` has the same meaning as
-        :meth:`receive`. Returns ``None`` only when the timeout elapses
-        with no message. Otherwise returns a :class:`ReceivedInput` whose
+        :meth:`receive`. Returns ``None`` on timeout or when the transport
+        discards an unsupported ALSA event. Otherwise returns a
+        :class:`ReceivedInput` whose
         ``physical_event`` is ``None`` for messages with no supported
         physical-control meaning, while ``message`` always carries the raw
         typed MIDI for diagnostics.

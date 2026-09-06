@@ -1,7 +1,8 @@
 # Usage
 
-This page describes the normal application path: construct a session, connect,
-initialize, send feedback, and receive physical events.
+This page describes application use of the synchronous session API. Start with
+the [README quick start](../README.md#quick-start) and the
+[hardware smoke test](hardware.md#first-hour-smoke-test).
 
 ## Device Setup
 
@@ -83,18 +84,18 @@ acknowledgement.
 ## Receive Physical Events
 
 ```python
-from xtouch_compact import ButtonPressed, FaderTouched
+from xtouch_compact import ButtonPressed
 
 event = session.receive(timeout=0.25)
 if isinstance(event, ButtonPressed):
     print(event.button, event.layer)
 ```
 
-`receive()` waits for one decoded event, or until `timeout` seconds
-elapse. `timeout=None` waits indefinitely. `timeout=0` polls and returns
-immediately. A positive value waits up to that many seconds. The call is
-synchronous. There is no callback API, background thread, or asyncio
-integration.
+`receive()` processes one transport result and returns its decoded event, if
+any. `timeout=None` waits indefinitely for transport input; `timeout=0` polls;
+a positive value waits up to that many seconds. Unsupported traffic may make
+the call return `None` before the timeout expires. The call is synchronous;
+there is no callback API, background thread, or asyncio integration.
 
 `receive()` returns `None` on timeout and also when a received MIDI message
 does not decode into one of the typed physical events below (unknown
@@ -152,8 +153,10 @@ Fader positions use the MIDI 7-bit range 0–127. `EncoderRingDisplay.at()` and
 Button LEDs accept `OFF`, `ON`, and `BLINK`. Encoder ring modes are `SINGLE`,
 `PAN`, `FAN`, `SPREAD`, and `TRIM`.
 
-Repeated setter calls with the same semantic value are suppressed, except
-`select_layer()`, which always transmits. Last-sent state is command history.
+Setters suppress values that still match their usable last-sent state;
+physical input can invalidate that history and permit an equal request to
+be sent again. `select_layer()` always transmits, and faders follow the
+[ownership rules](#fader-ownership) below. Last-sent state is command history.
 The device does not acknowledge that the LED, ring, or motor actually moved.
 
 `sync_feedback()` resends desired button, ring, layer, and foot-switch LED
@@ -163,15 +166,30 @@ setter can reassert them.
 
 ## Fader Ownership
 
-Each motorized fader has an independent snapshot from `fader_state(fader)`:
-desired value, last observed value, touch, owner, and last commanded motor
-value.
+Each motorized fader has an independent snapshot from `fader_state(fader)`;
+its fields are listed in [State Inspection](api.md#state-inspection).
 
-Touch gives that fader to the human. `set_fader()` still updates the desired
-value, but the session does not send a motor command while the fader is
-touched. On release, if the desired value is set and differs from the
-observed position, the session sends the desired value once. Other faders are
-unaffected.
+The application must call `receive()` or `receive_input()` regularly: those
+calls process touch, release, and position reports. A touch still queued in
+the transport has not changed the session's ownership state. The physical
+device's touch override is separate from this software state.
+
+A processed touch gives that fader to the human. `set_fader()` updates the
+desired value but sends no motor command while the session considers it
+touched. A processed release returns ownership to the application and
+reconciles a known desired value. Duplicate releases do not actuate.
+
+For both an application request and release reconciliation:
+
+- If `observation_is_current` is true, compare the desired value with the
+  observed value. Send only if they differ.
+- Otherwise, compare with `last_commanded_value`. Send only if they differ.
+
+A position report makes the observation current. A successfully sent motor
+command makes it non-current; merely touching the fader does not refresh it.
+"Current" means no motor command has been sent since the report, not that
+the device has acknowledged its position. The old `observed_value` remains
+available as diagnostic history. Other faders are unaffected.
 
 Initialization does not move faders to discover their positions. Unknown
 desired and observed values stay unset until the application or the device
@@ -180,15 +198,15 @@ provides them.
 ## Reconnect
 
 `reconnect()` is an explicit, synchronous transaction. It closes the previous
-connection, discovers the device by name again, asserts the currently desired
-layer, and calls `sync_feedback()`. It resets all fader snapshots and does
-not restore motor positions.
+connection, reconnects the transport, asserts the currently desired layer,
+and calls `sync_feedback()`. The default ALSA transport discovers the device
+by name again; custom transports supply their own connection behavior.
+Reconnect resets all fader snapshots and does not restore motor positions.
 
 A live ALSA send or receive failure raises `TransportConnectionError`, moves
 the session to `DISCONNECTED`, and leaves desired surface feedback in place
-for a later `reconnect()`. A receive timeout is not proof that the device is
-gone; it means no supported event arrived during that interval, which is a
-much weaker claim than "the device is disconnected." The library does not
+for a later `reconnect()`. A `None` receive result is not proof that the device
+is gone: it can mean timeout or unsupported traffic. The library does not
 poll or ping the device to establish liveness on its own, so a receive
 timeout is not a presence check, a watchdog, or an emergency-stop signal.
 Call `reconnect()` after you have established, by whatever means your
@@ -206,3 +224,18 @@ safety-rated enable/stop mechanism.
 
 `close()` is idempotent. A closed session may be connected again with
 `connect()` then `initialize()`. Context-manager exit always closes.
+
+## Application-Owned Bindings
+
+The library supplies physical identities and feedback, while the application
+assigns meaning: a fader might request a joint position, an encoder might
+adjust a parameter, and PLAY might trigger an application action. Robot
+bindings, motion planning, servo loops, and safety functions are not supplied.
+The library does not guarantee real-time timing or device presence.
+
+Use the semantic setters for tracked feedback. Raw diagnostic `send()` bypasses
+both feedback tracking and fader ownership. Mixing raw writes with setters can
+leave last-sent history stale and suppress a later semantic command. For
+non-fader feedback, `invalidate_feedback_state()` allows a subsequent sync to
+reassert desired values; it does not invalidate fader command history. Use a
+separate diagnostic session for raw motor experiments.

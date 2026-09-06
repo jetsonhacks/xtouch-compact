@@ -4,7 +4,7 @@
 Runs straight through with no per-step confirmation, unlike smoke.py. Watch
 the device while it runs:
 
-1. Every button LED (excluding the Layer A/B selectors, which have no LED)
+1. Every assignable button LED (excluding the device-owned Layer A/B indicators)
    cycles off, on, blink, off.
 2. Every encoder ring cycles on, off.
 3. All nine faders move in a traveling sine wave for a few seconds, then
