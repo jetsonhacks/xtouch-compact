@@ -382,6 +382,42 @@ def test_transport_rejects_io_while_disconnected() -> None:
         transport.send(NoteOn(1, 0, 0))
 
 
+def test_transport_publishes_its_endpoint_and_rejects_a_second_connect() -> None:
+    client = FakeClient("production-test")
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+    assert transport.endpoint is None
+
+    endpoint = transport.connect()
+
+    assert transport.endpoint is endpoint
+    assert endpoint.address == (24, 0)
+    with pytest.raises(TransportStateError, match="already connected"):
+        transport.connect()
+
+    transport.close()
+    assert transport.endpoint is None
+
+
+def test_transport_context_manager_connects_and_closes() -> None:
+    client = FakeClient("production-test")
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+
+    with transport as entered:
+        assert entered is transport
+        assert transport.connected
+        assert transport.endpoint is not None
+
+    assert not transport.connected
+    assert transport.endpoint is None
+    assert client.closed
+
+
 def test_transport_classifies_live_send_and_receive_failures() -> None:
     client = FakeClient("production-test")
     transport = AlsaSequencerTransport(

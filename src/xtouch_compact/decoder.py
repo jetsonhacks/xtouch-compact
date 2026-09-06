@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from .controls import Button, Encoder, Fader
 from .device_map import (
     FADER_RELEASED_VALUE,
     FADER_TOUCHED_VALUE,
-    FADER_VALUE_MAX,
-    FADER_VALUE_MIN,
     PRESS_VELOCITY,
+    RELEASE_VELOCITY,
     TX_INDEX,
     Interaction,
     MidiAddress,
@@ -26,7 +27,7 @@ from .events import (
     FaderTouched,
     PhysicalControlEvent,
 )
-from .midi import ControlChange, NoteOff, NoteOn, ProgramChange, RawMidiMessage
+from .midi import ControlChange, NoteOff, NoteOn, RawMidiMessage
 
 
 class InboundDecoder:
@@ -44,6 +45,7 @@ class InboundDecoder:
 
 
 def _address(raw: RawMidiMessage) -> MidiAddress | None:
+    """Return the TX lookup address, or ``None`` if the map keys no such address."""
     if isinstance(raw, ControlChange):
         return MidiAddress(
             MidiMessageType.CONTROL_CHANGE,
@@ -52,47 +54,50 @@ def _address(raw: RawMidiMessage) -> MidiAddress | None:
         )
     if isinstance(raw, (NoteOn, NoteOff)):
         return MidiAddress(MidiMessageType.NOTE, raw.note_number, raw.midi_channel)
-    if isinstance(raw, ProgramChange):
-        return None
-    raise TypeError(f"unsupported MIDI message {type(raw).__name__}")
+    # Program Change selects a preset layer host-to-device only; the device
+    # never transmits one.
+    return None
 
 
 def _decode_binding(
     binding: TxBinding, raw: RawMidiMessage
 ) -> PhysicalControlEvent | None:
+    layer = binding.layer
+
     if binding.interaction is Interaction.FADER_POSITION:
-        if not isinstance(raw, ControlChange) or not isinstance(binding.control, Fader):
-            return None
-        if not FADER_VALUE_MIN <= raw.value <= FADER_VALUE_MAX:
-            return None
-        return FaderPositionReported(binding.control, binding.layer, raw.value, raw)
+        message = cast(ControlChange, raw)
+        fader = cast(Fader, binding.control)
+        return FaderPositionReported(fader, layer, message.value, message)
+
     if binding.interaction is Interaction.FADER_TOUCH:
-        if not isinstance(raw, ControlChange) or not isinstance(binding.control, Fader):
-            return None
-        if raw.value == FADER_TOUCHED_VALUE:
-            return FaderTouched(binding.control, binding.layer, raw)
-        if raw.value == FADER_RELEASED_VALUE:
-            return FaderReleased(binding.control, binding.layer, raw)
+        message = cast(ControlChange, raw)
+        fader = cast(Fader, binding.control)
+        if message.value == FADER_TOUCHED_VALUE:
+            return FaderTouched(fader, layer, message)
+        if message.value == FADER_RELEASED_VALUE:
+            return FaderReleased(fader, layer, message)
         return None
+
     if binding.interaction is Interaction.ENCODER_TURN:
-        if not isinstance(raw, ControlChange) or not isinstance(
-            binding.control, Encoder
-        ):
-            return None
-        return EncoderPositionReported(binding.control, binding.layer, raw.value, raw)
+        message = cast(ControlChange, raw)
+        encoder = cast(Encoder, binding.control)
+        return EncoderPositionReported(encoder, layer, message.value, message)
+
     if binding.interaction is Interaction.ENCODER_PUSH:
-        if not isinstance(binding.control, Encoder):
-            return None
+        encoder = cast(Encoder, binding.control)
         if isinstance(raw, NoteOn) and raw.velocity == PRESS_VELOCITY:
-            return EncoderPressed(binding.control, binding.layer, raw)
-        if isinstance(raw, NoteOff) and raw.velocity == 0:
-            return EncoderReleased(binding.control, binding.layer, raw)
+            return EncoderPressed(encoder, layer, raw)
+        if isinstance(raw, NoteOff) and raw.velocity == RELEASE_VELOCITY:
+            return EncoderReleased(encoder, layer, raw)
         return None
+
     if binding.interaction is Interaction.BUTTON:
-        if not isinstance(binding.control, Button):
-            return None
+        button = cast(Button, binding.control)
         if isinstance(raw, NoteOn) and raw.velocity == PRESS_VELOCITY:
-            return ButtonPressed(binding.control, binding.layer, raw)
-        if isinstance(raw, NoteOff) and raw.velocity == 0:
-            return ButtonReleased(binding.control, binding.layer, raw)
+            return ButtonPressed(button, layer, raw)
+        if isinstance(raw, NoteOff) and raw.velocity == RELEASE_VELOCITY:
+            return ButtonReleased(button, layer, raw)
+        return None
+
+    # Foot-control input is mapped but not published as a typed event.
     return None

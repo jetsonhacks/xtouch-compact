@@ -27,8 +27,16 @@ from xtouch_compact import (
 @pytest.mark.parametrize(
     ("inspect", "control"),
     [
+        # Real identities with no synchronized feedback of that kind.
         ("button_feedback_state", Button.LAYER_A),
         ("status_feedback_state", FootControl.EXPRESSION_PEDAL),
+        # Every Encoder has a ring, so only an invalid argument reaches the
+        # error path. State inspection must still fail as a library error
+        # rather than leaking a bare KeyError or TypeError to the caller.
+        ("encoder_feedback_state", "encoder_1"),
+        ("encoder_feedback_state", ["encoder_1"]),
+        ("button_feedback_state", ["upper_top_1"]),
+        ("status_feedback_state", ["foot_switch"]),
     ],
 )
 def test_unsupported_state_inspection_uses_public_error(

@@ -133,27 +133,28 @@ class SurfaceStateController:
                 current = self.button_state(button)
                 self._buttons[button] = replace(current, last_sent=None)
         elif isinstance(event, ButtonReleased):
-            self._invalidate_button_led_on_release(event.button)
+            # Measurement on 2026-08-09 found that releasing an assignable
+            # button after a host BLINK command turned its LED off, replacing
+            # rather than restoring the last remote state (see
+            # ``docs/hardware-observations.md``, "Observed 2026-08-09: Buttons
+            # and Layers"). Applied as a conservative group policy across all
+            # assignable buttons from that one representative measurement.
+            self.invalidate_button_led(event.button)
         elif isinstance(event, EncoderPositionReported):
             self.invalidate_encoder_display(event.encoder)
 
-    def _invalidate_button_led_on_release(self, button: Button) -> None:
-        """Mark one assignable button's last-sent LED unknown on release.
+    def invalidate_button_led(self, button: Button) -> None:
+        """Mark one button's last-sent LED state unknown, keeping desired state.
 
-        Measurement on 2026-08-09 found that releasing an assignable
-        button after a host BLINK command turned its LED off, replacing
-        rather than restoring the last remote state (see
-        ``docs/hardware-observations.md``, "Observed 2026-08-09: Buttons
-        and Layers"). This is applied as a conservative group policy
-        across all assignable buttons based on that representative
-        measurement, not independent characterization of every button.
+        Used where the device may have redrawn the LED locally, and after
+        raw diagnostic output to the button's LED address, so the next
+        matching-value request is not suppressed as a no-op duplicate.
         Identities without a synchronized LED, including Layer A/B, are
         ignored.
         """
         if button not in self._buttons:
             return
-        current = self.button_state(button)
-        self._buttons[button] = replace(current, last_sent=None)
+        self._buttons[button] = replace(self.button_state(button), last_sent=None)
 
     def request_button(self, button: Button, state: ButtonLedState) -> bool:
         current = self.button_state(button)
@@ -218,19 +219,6 @@ class SurfaceStateController:
             self.status_state(control), last_sent=state
         )
 
-    def raw_button_led_sent(self, button: Button) -> None:
-        """Invalidate one button LED's last-sent state after raw output.
-
-        Called after a successful diagnostic ``send()`` whose address
-        matches this button's LED RX binding. Desired state is untouched;
-        only the command-history bookkeeping used for deduplication is
-        marked unknown, so the next matching-value semantic request is not
-        suppressed as a no-op duplicate of the raw traffic.
-        """
-        if button not in self._buttons:
-            return
-        self._buttons[button] = replace(self.button_state(button), last_sent=None)
-
     def raw_encoder_mode_sent(self, encoder: Encoder) -> None:
         """Invalidate one encoder's ring-mode (and display) history.
 
@@ -253,8 +241,6 @@ class SurfaceStateController:
 
     def raw_status_sent(self, control: FootControl) -> None:
         """Invalidate one status LED's last-sent history after raw output."""
-        if control not in self._status_leds:
-            return
         self._status_leds[control] = replace(self.status_state(control), last_sent=None)
 
     def raw_layer_sent(self) -> None:

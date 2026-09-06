@@ -496,7 +496,7 @@ class XTouchCompactSession:
         if binding is None:
             return
         if binding.operation == "led" and isinstance(binding.control, Button):
-            self._surface.raw_button_led_sent(binding.control)
+            self._surface.invalidate_button_led(binding.control)
         elif binding.operation == "ring_behavior" and isinstance(
             binding.control, Encoder
         ):

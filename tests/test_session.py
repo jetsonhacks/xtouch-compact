@@ -188,6 +188,36 @@ def test_double_connect_is_a_lifecycle_error(build_session: SessionFactory) -> N
         device_session.connect()
 
 
+def test_session_is_connecting_and_rejects_reentry_during_transport_connect() -> None:
+    """A caller-supplied transport runs inside connect(), so CONNECTING is visible.
+
+    It is the state that makes a re-entrant connect() raise instead of
+    recursing, and that reports "still connecting" rather than a misleading
+    "unasserted" for a ready-only method called from that window.
+    """
+    observed: dict[str, object] = {}
+
+    class ReentrantTransport(FakeTransport):
+        session: XTouchCompactSession
+
+        def connect(self) -> object:
+            observed["state"] = self.session.state
+            with pytest.raises(LifecycleError, match="still connecting"):
+                self.session.receive()
+            with pytest.raises(LifecycleError, match="already connected"):
+                self.session.connect()
+            return super().connect()
+
+    transport = ReentrantTransport()
+    session = XTouchCompactSession(transport, global_midi_channel=2)
+    transport.session = session
+
+    session.connect()
+
+    assert observed["state"] is SessionState.CONNECTING
+    assert session.state is SessionState.STARTUP_LAYER_UNASSERTED
+
+
 def test_close_is_idempotent_and_session_is_reusable(
     build_session: SessionFactory,
 ) -> None:

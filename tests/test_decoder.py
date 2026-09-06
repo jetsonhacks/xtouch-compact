@@ -106,6 +106,8 @@ def test_repeated_encoder_values_remain_observable(decoder: InboundDecoder) -> N
         ControlChange(1, 101, 64),
         NoteOn(1, 54, 1),
         NoteOff(1, 54, 1),
+        NoteOn(1, 0, 1),  # encoder_1 push, velocity is not a press
+        NoteOff(1, 0, 1),  # encoder_1 push, velocity is not a release
         ControlChange(1, 26, 64),
         ProgramChange(1, 0),
     ],

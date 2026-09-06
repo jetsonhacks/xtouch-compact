@@ -7,6 +7,7 @@ from xtouch_compact import (
     ControlChange,
     Encoder,
     EncoderRingDisplay,
+    EncoderRingDisplayKind,
     EncoderRingMode,
     Fader,
     FootControl,
@@ -191,6 +192,29 @@ def test_encoder_ring_display_rejects_invalid_positions_before_transport(
 def test_encoder_ring_display_rejects_invalid_kind() -> None:
     with pytest.raises(TypeError, match="EncoderRingDisplayKind"):
         EncoderRingDisplay("position", 1)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("position", [None, "7", 7.0, True])
+def test_positioned_ring_display_requires_an_integer_position(
+    position: object,
+) -> None:
+    with pytest.raises(TypeError, match="position must be an integer"):
+        EncoderRingDisplay(EncoderRingDisplayKind.POSITION, position)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        EncoderRingDisplayKind.OFF,
+        EncoderRingDisplayKind.ALL_ON,
+        EncoderRingDisplayKind.ALL_BLINKING,
+    ],
+)
+def test_unpositioned_ring_display_rejects_a_position(
+    kind: EncoderRingDisplayKind,
+) -> None:
+    with pytest.raises(ValueError, match="does not accept a position"):
+        EncoderRingDisplay(kind, 5)
 
 
 def test_layer_selection_uses_same_device_map_mapping_as_initialization(

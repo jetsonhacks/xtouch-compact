@@ -198,12 +198,10 @@ def alsa_event_from_midi(message: RawMidiMessage) -> Any:
             param=message.control_number,
             value=message.value,
         )
-    if isinstance(message, ProgramChange):
-        return ProgramChangeEvent(
-            channel=midi_channel,
-            value=message.program_number,
-        )
-    raise TypeError(f"unsupported MIDI message {type(message).__name__}")
+    return ProgramChangeEvent(
+        channel=midi_channel,
+        value=message.program_number,
+    )
 
 
 class AlsaSequencerTransport:
