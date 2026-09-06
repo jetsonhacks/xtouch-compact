@@ -9,20 +9,58 @@ The library treats the controller as a bidirectional physical control surface.
 Application code uses names such as `Fader.CHANNEL_1` and `Button.PLAY`. It
 does not need MIDI note numbers, controller numbers, or ALSA client numbers.
 
+## What This Library Is For
+
+`xtouch-compact` is a control-surface library for robotics and other
+interactive control applications that use the X-TOUCH COMPACT as a physical
+input and feedback panel — for example, jogging a joint from a fader,
+tele-operating a system with the encoders, or using the transport buttons and
+LEDs as application-level controls.
+
+Within that role, the library:
+
+- decodes physical control input (fader moves and touch, encoder turns and
+  pushes, button presses) into typed events;
+- drives the controller's supported feedback: motorized faders, button LEDs,
+  encoder LED rings, and the foot-switch status LED;
+- keeps its own record of that feedback state coherent with what it last sent
+  and, for faders, with human touch; and
+- exposes that behavior through a synchronous, in-process session API —
+  `connect()` / `initialize()` / `receive()` / the `set_*` methods — with no
+  callback, thread, or asyncio layer of its own.
+
+It does not control a robot, run a motion planner, close a servo loop, or
+provide any safety function. What a fader, encoder, or button *means* to a
+robot or application — a joint, an axis, a playback action — is entirely
+application code; see [Application-Owned Bindings](#application-owned-bindings)
+below.
+
 ## Requirements
 
 - Linux with ALSA Sequencer available (`/dev/snd/seq`)
 - Python 3.10 or later
 - An X-TOUCH COMPACT in **Standard MIDI** mode, not Mackie Control
 - The device Global MIDI Channel, in the user-facing range 1–16
+- The controller's **factory** Standard MIDI mapping. Mappings changed with
+  the X-TOUCH Editor are outside this library's supported contract.
 
 Python dependencies, installed by `uv sync` from `pyproject.toml`:
 
 - `alsa-midi` 1.0.4 or later (ALSA Sequencer client)
 
-The device map is a fixed typed Python table (`xtouch_compact.device_map`)
-built into the library; there is no runtime YAML dependency or device
-specification to load.
+The library supports exactly one fixed factory profile: a typed Python table
+(`xtouch_compact.device_map`) built into the package. There is no runtime
+YAML dependency, device-specification file, or injection point, and no
+support for arbitrary or user-remapped MIDI layouts.
+
+"Out of the box" here means the library assumes, rather than detects or
+repairs, that this contract already holds: the device in Standard MIDI mode,
+its Global MIDI Channel configured and passed to the library, a Linux host
+with ALSA Sequencer available, and the factory mapping intact. If any of
+those are wrong, most commands fail silently on the device side rather than
+raising an error in this library — see
+[docs/hardware.md](docs/hardware.md#first-hour-smoke-test) for the smoke
+test that checks them before you build on top.
 
 This project does not include a kernel, kernel modules, or an X-TOUCH device
 driver. The controller is USB class-compliant MIDI. Some Linux kernels,
@@ -114,6 +152,52 @@ The extracted Standard MIDI map is
 [docs/xtouch-compact-midi.md](docs/xtouch-compact-midi.md). Dated hardware
 measurements that the session policies follow are in
 [docs/hardware-observations.md](docs/hardware-observations.md).
+
+## Fader Ownership
+
+Each motorized fader is either application-owned or human-owned:
+
+- While a fader is untouched, `set_fader()` commands the motor to that
+  position — the application owns it.
+- Touching the fader hands it to the human. `set_fader()` still records the
+  application's desired value, but the library does not fight the touch with
+  motor motion while it is held.
+- On release, the library reconciles the motor toward the application's
+  current desired value, according to `fader_state()`'s desired/observed/
+  last-commanded model — not by assuming the motor reached any prior
+  command.
+
+This is a conceptual summary. The full state model, including what
+"observed" does and does not mean, is in
+[docs/usage.md#fader-ownership](docs/usage.md#fader-ownership) and
+[docs/api.md](docs/api.md#state-inspection).
+
+## Feedback and State
+
+The library keeps a coherent record of the feedback it has sent — desired
+button LED, encoder ring, layer, and foot-switch state, each against what
+was last actually sent — and resends what differs with `sync_feedback()`.
+For faders it additionally tracks the human/application ownership above.
+Sent state is command history, not hardware acknowledgement: the controller
+does not confirm that an LED, ring, or motor actually changed. See
+[docs/usage.md](docs/usage.md) and [docs/api.md](docs/api.md#state-inspection)
+for the full model.
+
+## Application-Owned Bindings
+
+The library provides the physical control and feedback abstraction; it has
+no opinion on what a control *means*. Deciding that, for example,
+`Fader.CHANNEL_1` drives a robot joint, an encoder drives body yaw,
+`Button.PLAY` starts a motion sequence, or an LED reflects application
+state, is application code, not something this library configures or ships.
+This repository contains no robot-specific bindings.
+
+The library also does not provide a safety-rated enable, emergency stop, or
+dead-man control, and it does not guarantee device presence or real-time
+timing. A `receive()` timeout means no supported event arrived in that
+interval — it is not proof the device disconnected. Device-loss policy and
+any robot-safety behavior gated on the controller are the application's
+responsibility; see [docs/usage.md#reconnect](docs/usage.md#reconnect).
 
 ## Scope
 
