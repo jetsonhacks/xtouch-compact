@@ -6,6 +6,7 @@ from tests.helpers import FakeTransport, SendFailure, SessionBuilder
 from xtouch_compact import (
     Button,
     ButtonLedState,
+    ButtonReleased,
     ControlChange,
     Encoder,
     EncoderPositionReported,
@@ -14,6 +15,7 @@ from xtouch_compact import (
     Fader,
     FootControl,
     Layer,
+    NoteOff,
     NoteOn,
     ProgramChange,
     StatusLedState,
@@ -99,6 +101,90 @@ def test_transport_button_press_invalidates_group_for_led_reassertion(
 
     assert len(transport.sent) == 1
     assert session.button_feedback_state(Button.PLAY).last_sent is ButtonLedState.ON
+
+
+def test_release_after_command_and_setter_reasserts(
+    ready_session: tuple[XTouchCompactSession, FakeTransport],
+) -> None:
+    session, transport = ready_session
+    button = Button.UPPER_TOP_1
+    session.set_button_led(button, ButtonLedState.BLINK)
+    transport.messages.append(NoteOn(1, 16, 127))
+    session.receive_input()
+    transport.messages.append(NoteOff(1, 16, 0))
+    session.receive_input()
+    transport.sent.clear()
+
+    session.set_button_led(button, ButtonLedState.BLINK)
+
+    assert len(transport.sent) == 1
+    assert session.button_feedback_state(button).last_sent is ButtonLedState.BLINK
+
+
+def test_release_after_command_and_sync_feedback_alone_reasserts(
+    ready_session: tuple[XTouchCompactSession, FakeTransport],
+) -> None:
+    session, transport = ready_session
+    button = Button.UPPER_TOP_1
+    session.set_button_led(button, ButtonLedState.BLINK)
+    transport.messages.append(NoteOn(1, 16, 127))
+    session.receive_input()
+    transport.messages.append(NoteOff(1, 16, 0))
+    session.receive_input()
+    transport.sent.clear()
+
+    session.sync_feedback()
+
+    assert len(transport.sent) == 1
+    assert session.button_feedback_state(button).last_sent is ButtonLedState.BLINK
+
+
+def test_command_during_hold_remains_effective_after_release(
+    ready_session: tuple[XTouchCompactSession, FakeTransport],
+) -> None:
+    session, transport = ready_session
+    button = Button.UPPER_TOP_1
+    transport.messages.append(NoteOn(1, 16, 127))
+    session.receive_input()
+
+    session.set_button_led(button, ButtonLedState.ON)
+    assert session.button_feedback_state(button).last_sent is ButtonLedState.ON
+
+    transport.messages.append(NoteOff(1, 16, 0))
+    session.receive_input()
+    transport.sent.clear()
+
+    session.set_button_led(button, ButtonLedState.ON)
+
+    assert len(transport.sent) == 1
+
+
+def test_release_invalidation_does_not_affect_unrelated_button(
+    ready_session: tuple[XTouchCompactSession, FakeTransport],
+) -> None:
+    session, transport = ready_session
+    session.set_button_led(Button.UPPER_TOP_1, ButtonLedState.ON)
+    session.set_button_led(Button.UPPER_MID_1, ButtonLedState.ON)
+    transport.messages.append(NoteOn(1, 16, 127))
+    session.receive_input()
+    transport.messages.append(NoteOff(1, 16, 0))
+    session.receive_input()
+
+    assert session.button_feedback_state(Button.UPPER_TOP_1).last_sent is None
+    assert (
+        session.button_feedback_state(Button.UPPER_MID_1).last_sent is ButtonLedState.ON
+    )
+
+
+def test_release_of_button_without_synchronized_led_does_not_raise() -> None:
+    from xtouch_compact.surface_state import SurfaceStateController
+
+    controller = SurfaceStateController(assignable_buttons=(Button.UPPER_TOP_1,))
+    event = ButtonReleased(button=Button.LAYER_A, layer=Layer.A, raw=NoteOff(1, 0, 0))
+
+    controller.physical_event(event)  # must not raise
+
+    assert controller.button_state(Button.UPPER_TOP_1).last_sent is None
 
 
 @pytest.mark.parametrize("mode", list(EncoderRingMode))

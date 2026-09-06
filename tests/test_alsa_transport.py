@@ -296,6 +296,70 @@ def test_transport_close_tolerates_vanished_remote_endpoint() -> None:
     assert not transport.connected
 
 
+@pytest.mark.parametrize(
+    "make_error",
+    [
+        lambda: ALSAError("remote endpoint gone", -2),
+        lambda: ALSAError("remote endpoint gone", 2),
+        lambda: FileNotFoundError(2, "No such file or directory"),
+    ],
+)
+def test_transport_close_tolerates_enoent_in_either_form(
+    make_error: object,
+) -> None:
+    client = FakeClient("production-test")
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+    transport.connect()
+
+    def raise_error(address: tuple[int, int]) -> None:
+        raise make_error()  # type: ignore[operator]
+
+    client.port.disconnect_to = raise_error  # type: ignore[method-assign]
+    client.port.disconnect_from = raise_error  # type: ignore[method-assign]
+
+    transport.close()
+
+    assert client.closed
+    assert not transport.connected
+
+
+def test_transport_close_propagates_missing_errno_exception() -> None:
+    client = FakeClient("production-test")
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+    transport.connect()
+
+    def raise_error(address: tuple[int, int]) -> None:
+        raise RuntimeError("no errno here")
+
+    client.port.disconnect_to = raise_error  # type: ignore[method-assign]
+
+    with pytest.raises(TransportConnectionError, match="close failed"):
+        transport.close()
+
+
+def test_transport_close_propagates_unrelated_errno() -> None:
+    client = FakeClient("production-test")
+    transport = AlsaSequencerTransport(
+        local_port_name="local",
+        client_factory=lambda name: client,
+    )
+    transport.connect()
+
+    def raise_error(address: tuple[int, int]) -> None:
+        raise ALSAError("permission denied", -13)
+
+    client.port.disconnect_to = raise_error  # type: ignore[method-assign]
+
+    with pytest.raises(TransportConnectionError, match="close failed"):
+        transport.close()
+
+
 def test_transport_classifies_close_failure() -> None:
     client = FakeClient("production-test")
     transport = AlsaSequencerTransport(

@@ -6,7 +6,12 @@ from dataclasses import dataclass, replace
 
 from .controls import Button, Encoder, FootControl, Layer
 from .errors import UnsupportedOperationError
-from .events import ButtonPressed, EncoderPositionReported, PhysicalControlEvent
+from .events import (
+    ButtonPressed,
+    ButtonReleased,
+    EncoderPositionReported,
+    PhysicalControlEvent,
+)
 from .feedback import (
     ButtonLedState,
     EncoderRingDisplay,
@@ -127,8 +132,28 @@ class SurfaceStateController:
             for button in _TRANSPORT_BUTTONS:
                 current = self.button_state(button)
                 self._buttons[button] = replace(current, last_sent=None)
+        elif isinstance(event, ButtonReleased):
+            self._invalidate_button_led_on_release(event.button)
         elif isinstance(event, EncoderPositionReported):
             self.invalidate_encoder_display(event.encoder)
+
+    def _invalidate_button_led_on_release(self, button: Button) -> None:
+        """Mark one assignable button's last-sent LED unknown on release.
+
+        Measurement on 2026-08-09 found that releasing an assignable
+        button after a host BLINK command turned its LED off, replacing
+        rather than restoring the last remote state (see
+        ``docs/hardware-observations.md``, "Observed 2026-08-09: Buttons
+        and Layers"). This is applied as a conservative group policy
+        across all assignable buttons based on that representative
+        measurement, not independent characterization of every button.
+        Identities without a synchronized LED, including Layer A/B, are
+        ignored.
+        """
+        if button not in self._buttons:
+            return
+        current = self.button_state(button)
+        self._buttons[button] = replace(current, last_sent=None)
 
     def request_button(self, button: Button, state: ButtonLedState) -> bool:
         current = self.button_state(button)

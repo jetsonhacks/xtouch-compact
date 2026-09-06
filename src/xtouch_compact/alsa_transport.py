@@ -50,10 +50,7 @@ def _connect_failure_message(error: BaseException) -> str:
     without ALSA Sequencer support, notably stock Jetson kernels — so it
     gets its own message instead of a generic wrapper.
     """
-    errno_value = getattr(error, "errnum", None)
-    if errno_value is None:
-        errno_value = getattr(error, "errno", None)
-    if errno_value is not None and abs(errno_value) == ENOENT:
+    if _is_enoent(error):
         return (
             "ALSA Sequencer device /dev/snd/seq is missing; the running "
             "kernel was likely built without ALSA Sequencer support "
@@ -65,13 +62,21 @@ def _connect_failure_message(error: BaseException) -> str:
     )
 
 
+def _is_enoent(error: BaseException) -> bool:
+    """Return whether ``error`` reports ENOENT, ALSA- or OS-style, either sign."""
+    errno_value = getattr(error, "errnum", None)
+    if errno_value is None:
+        errno_value = getattr(error, "errno", None)
+    return errno_value is not None and abs(errno_value) == ENOENT
+
+
 def _disconnect_if_endpoint_exists(
     operation: Callable[[tuple[int, int]], None], address: tuple[int, int]
 ) -> None:
     try:
         operation(address)
     except Exception as error:
-        if getattr(error, "errnum", None) != -ENOENT:
+        if not _is_enoent(error):
             raise
 
 

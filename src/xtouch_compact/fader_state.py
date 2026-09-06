@@ -19,10 +19,20 @@ class FaderOwner(Enum):
 
 @dataclass(frozen=True, slots=True)
 class FaderState:
-    """Read-only snapshot of application and device state for one fader."""
+    """Read-only snapshot of application and device state for one fader.
+
+    ``observation_is_current`` means only that no motor command has been
+    sent since ``observed_value`` was last reported: it is not hardware
+    acknowledgement or a guarantee of present physical position. A decoded
+    position report sets it true; a successfully sent motor command sets
+    it false. Ordinary host-driven motor travel has no reliable position
+    echo, so a stale (non-current) observation must not suppress a needed
+    command, while touch alone does not refresh it.
+    """
 
     desired_value: int | None = None
     observed_value: int | None = None
+    observation_is_current: bool = False
     touched: bool = False
     owner: FaderOwner = FaderOwner.APPLICATION
     last_commanded_value: int | None = None
@@ -43,12 +53,18 @@ class DefaultFaderOwnershipPolicy:
         updated = replace(state, desired_value=value)
         if state.owner is FaderOwner.HUMAN:
             return FaderTransition(updated)
-        if state.observed_value == value or state.last_commanded_value == value:
+        if state.observation_is_current:
+            if state.observed_value == value:
+                return FaderTransition(updated)
+            return FaderTransition(updated, value)
+        if state.last_commanded_value == value:
             return FaderTransition(updated)
         return FaderTransition(updated, value)
 
     def position_reported(self, state: FaderState, value: int) -> FaderTransition:
-        return FaderTransition(replace(state, observed_value=value))
+        return FaderTransition(
+            replace(state, observed_value=value, observation_is_current=True)
+        )
 
     def touched(self, state: FaderState) -> FaderTransition:
         return FaderTransition(replace(state, touched=True, owner=FaderOwner.HUMAN))
@@ -61,7 +77,12 @@ class DefaultFaderOwnershipPolicy:
             owner=FaderOwner.APPLICATION,
         )
         desired = updated.desired_value
-        if not was_touched or desired is None or desired == updated.observed_value:
+        if not was_touched or desired is None:
+            return FaderTransition(updated)
+        if updated.observation_is_current:
+            if desired == updated.observed_value:
+                return FaderTransition(updated)
+        elif desired == updated.last_commanded_value:
             return FaderTransition(updated)
         return FaderTransition(updated, desired)
 
@@ -109,7 +130,11 @@ class FaderStateController:
         return self._apply(event.fader, transition)
 
     def motor_command_sent(self, fader: Fader, value: int) -> None:
-        self._states[fader] = replace(self._states[fader], last_commanded_value=value)
+        self._states[fader] = replace(
+            self._states[fader],
+            last_commanded_value=value,
+            observation_is_current=False,
+        )
 
     def reset(self) -> None:
         self._states = {fader: FaderState() for fader in Fader}

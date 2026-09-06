@@ -111,8 +111,8 @@ appears only as an undecoded message on `receive_input()`.
 - `EncoderRingDisplay.all_on()`
 - `EncoderRingDisplay.all_blinking()`
 
-Positioned displays require an integer position. Other kinds reject a
-position argument.
+Positioned displays require an integer ring segment position from 1 through
+13, not a MIDI 0–127 value. Other kinds reject a position argument.
 
 ## State Inspection
 

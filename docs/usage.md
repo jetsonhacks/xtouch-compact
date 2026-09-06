@@ -137,7 +137,9 @@ session.select_layer(Layer.B)
 session.set_foot_switch_led(StatusLedState.ON)
 ```
 
-Fader positions and encoder display positions use the MIDI 7-bit range 0–127.
+Fader positions use the MIDI 7-bit range 0–127. `EncoderRingDisplay.at()` and
+`.blinking_at()` take a ring segment position from 1 through 13, not a MIDI
+0–127 value; `.off()`, `.all_on()`, and `.all_blinking()` take no position.
 Button LEDs accept `OFF`, `ON`, and `BLINK`. Encoder ring modes are `SINGLE`,
 `PAN`, `FAN`, `SPREAD`, and `TRIM`.
 
