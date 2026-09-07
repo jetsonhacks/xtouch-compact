@@ -6,6 +6,13 @@ Python library for the Behringer X-TOUCH COMPACT on Linux ALSA Sequencer.
 Use its faders, encoders, and buttons as an input and feedback panel for
 robotics and other interactive applications.
 
+> **NVIDIA Jetson prerequisite:** Jetson kernels typically ship without ALSA
+> Sequencer support, which this library requires (`/dev/snd/seq`). You will
+> generally need to build and install a kernel with ALSA Sequencer enabled
+> before using this library. Kernel compilation and installation are outside
+> the scope of this repository; installing the Python dependencies alone does
+> not enable this kernel feature.
+
 The synchronous API provides typed input events and commands for motorized
 faders, button LEDs, encoder LED rings, layer selection, and the foot-switch
 status LED. Application code uses names such as `Fader.CHANNEL_1` and
