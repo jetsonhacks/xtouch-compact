@@ -289,6 +289,41 @@ def test_encoder_mode_change_restores_known_desired_display(
     assert state.last_sent_display == display
 
 
+def test_sync_retries_display_without_resending_successful_mode(
+    ready_session: tuple[XTouchCompactSession, FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session, transport = ready_session
+    encoder = Encoder.CHANNEL_2
+    display = EncoderRingDisplay.at(10)
+    session.set_encoder_ring_value(encoder, display)
+    transport.sent.clear()
+    send = transport.send
+
+    def fail_display_once(message: object) -> None:
+        send(message)
+        # Accept the mode, then reject the display it causes us to restore.
+        if message == ControlChange(2, 11, 1):
+            transport.fail_next_send = True
+
+    monkeypatch.setattr(transport, "send", fail_display_once)
+
+    with pytest.raises(SendFailure):
+        session.set_encoder_ring_mode(encoder, EncoderRingMode.PAN)
+
+    failed = session.encoder_feedback_state(encoder)
+    assert failed.last_sent_mode is EncoderRingMode.PAN
+    assert failed.desired_display == display
+    assert failed.last_sent_display is None
+    assert transport.sent == [ControlChange(2, 11, 1)]
+
+    session.sync_feedback()
+    session.sync_feedback()
+
+    assert transport.sent == [ControlChange(2, 11, 1), ControlChange(2, 27, 10)]
+    assert session.encoder_feedback_state(encoder).last_sent_display == display
+
+
 def test_physical_rotation_invalidates_last_sent_display_for_reassertion(
     ready_session: tuple[XTouchCompactSession, FakeTransport],
 ) -> None:
@@ -470,6 +505,7 @@ def test_invalidation_and_sync_resend_only_known_desired_feedback(
     session.set_encoder_ring_mode(Encoder.CHANNEL_1, EncoderRingMode.PAN)
     session.set_encoder_ring_value(Encoder.CHANNEL_1, EncoderRingDisplay.at(7))
     session.set_foot_switch_led(StatusLedState.ON)
+    before = session.surface_state()
     transport.sent.clear()
 
     session.invalidate_feedback_state()
@@ -478,12 +514,22 @@ def test_invalidation_and_sync_resend_only_known_desired_feedback(
     assert session.encoder_feedback_state(Encoder.CHANNEL_1).last_sent_mode is None
     assert invalid.layer.last_sent is None
     assert session.status_feedback_state().last_sent is None
+    # Previously returned snapshots retain their history across invalidation.
+    assert before.encoders[0].last_sent_mode is EncoderRingMode.PAN
+    assert before.encoders[0].last_sent_display == EncoderRingDisplay.at(7)
+    assert before.layer.last_sent is Layer.A
+    assert before.status_leds[0].last_sent is StatusLedState.ON
 
     session.sync_feedback()
 
-    assert len(transport.sent) == 5
-    assert sum(isinstance(message, NoteOn) for message in transport.sent) == 1
-    assert sum(isinstance(message, ProgramChange) for message in transport.sent) == 1
+    assert transport.sent == [
+        NoteOn(2, 38, 2),
+        ControlChange(2, 10, 1),
+        ControlChange(2, 26, 7),
+        ProgramChange(2, 0),
+        ControlChange(2, 42, 127),
+    ]
+    assert session.surface_state() == before
     session.sync_feedback()
     assert len(transport.sent) == 5
 

@@ -134,28 +134,19 @@ def _tx_faders(
 ) -> tuple[TxBinding, ...]:
     bindings: list[TxBinding] = []
     for index, fader in enumerate(FADERS):
-        bindings.append(
-            TxBinding(
-                layer,
-                channel,
-                MidiAddress(
-                    MidiMessageType.CONTROL_CHANGE, position_base + index, channel
-                ),
-                fader,
-                Interaction.FADER_POSITION,
+        for base, interaction in (
+            (position_base, Interaction.FADER_POSITION),
+            (touch_base, Interaction.FADER_TOUCH),
+        ):
+            bindings.append(
+                TxBinding(
+                    layer,
+                    channel,
+                    MidiAddress(MidiMessageType.CONTROL_CHANGE, base + index, channel),
+                    fader,
+                    interaction,
+                )
             )
-        )
-        bindings.append(
-            TxBinding(
-                layer,
-                channel,
-                MidiAddress(
-                    MidiMessageType.CONTROL_CHANGE, touch_base + index, channel
-                ),
-                fader,
-                Interaction.FADER_TOUCH,
-            )
-        )
     return tuple(bindings)
 
 
@@ -164,24 +155,19 @@ def _tx_encoders(
 ) -> tuple[TxBinding, ...]:
     bindings: list[TxBinding] = []
     for index, encoder in enumerate(ENCODERS):
-        bindings.append(
-            TxBinding(
-                layer,
-                channel,
-                MidiAddress(MidiMessageType.CONTROL_CHANGE, turn_base + index, channel),
-                encoder,
-                Interaction.ENCODER_TURN,
+        for message_type, base, interaction in (
+            (MidiMessageType.CONTROL_CHANGE, turn_base, Interaction.ENCODER_TURN),
+            (MidiMessageType.NOTE, push_base, Interaction.ENCODER_PUSH),
+        ):
+            bindings.append(
+                TxBinding(
+                    layer,
+                    channel,
+                    MidiAddress(message_type, base + index, channel),
+                    encoder,
+                    interaction,
+                )
             )
-        )
-        bindings.append(
-            TxBinding(
-                layer,
-                channel,
-                MidiAddress(MidiMessageType.NOTE, push_base + index, channel),
-                encoder,
-                Interaction.ENCODER_PUSH,
-            )
-        )
     return tuple(bindings)
 
 
@@ -201,21 +187,18 @@ def _tx_buttons(layer: Layer, channel: int, note_base: int) -> tuple[TxBinding, 
 def _tx_foot_controls(
     layer: Layer, channel: int, expression_number: int, foot_switch_number: int
 ) -> tuple[TxBinding, ...]:
-    return (
+    return tuple(
         TxBinding(
             layer,
             channel,
-            MidiAddress(MidiMessageType.CONTROL_CHANGE, expression_number, channel),
-            FootControl.EXPRESSION_PEDAL,
+            MidiAddress(MidiMessageType.CONTROL_CHANGE, number, channel),
+            control,
             Interaction.FOOT_CONTROL,
-        ),
-        TxBinding(
-            layer,
-            channel,
-            MidiAddress(MidiMessageType.CONTROL_CHANGE, foot_switch_number, channel),
-            FootControl.FOOT_SWITCH,
-            Interaction.FOOT_CONTROL,
-        ),
+        )
+        for control, number in (
+            (FootControl.EXPRESSION_PEDAL, expression_number),
+            (FootControl.FOOT_SWITCH, foot_switch_number),
+        )
     )
 
 
@@ -278,20 +261,17 @@ def _rx_button_leds(number_base: int) -> tuple[RxBinding, ...]:
 def _rx_encoder_rings(behavior_base: int, value_base: int) -> tuple[RxBinding, ...]:
     bindings: list[RxBinding] = []
     for index, encoder in enumerate(ENCODERS):
-        bindings.append(
-            RxBinding(
-                MidiAddress(MidiMessageType.CONTROL_CHANGE, behavior_base + index),
-                encoder,
-                "ring_behavior",
+        for base, operation in (
+            (behavior_base, "ring_behavior"),
+            (value_base, "ring_value"),
+        ):
+            bindings.append(
+                RxBinding(
+                    MidiAddress(MidiMessageType.CONTROL_CHANGE, base + index),
+                    encoder,
+                    operation,
+                )
             )
-        )
-        bindings.append(
-            RxBinding(
-                MidiAddress(MidiMessageType.CONTROL_CHANGE, value_base + index),
-                encoder,
-                "ring_value",
-            )
-        )
     return tuple(bindings)
 
 

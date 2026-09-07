@@ -9,7 +9,7 @@ from enum import Enum
 from .controls import Button, Encoder, Fader, FootControl, Layer
 from .decoder import InboundDecoder
 from .device_map import (
-    RX_CONTROL_INDEX,
+    ASSIGNABLE_BUTTONS,
     classify_rx_message,
     matches_layer_program_change,
 )
@@ -97,10 +97,7 @@ class XTouchCompactSession:
         )
         self._state = SessionState.DISCONNECTED
         self._faders = FaderStateController()
-        assignable_buttons = tuple(
-            button for button in Button if (button, "led") in RX_CONTROL_INDEX
-        )
-        self._surface = SurfaceStateController(assignable_buttons)
+        self._surface = SurfaceStateController(ASSIGNABLE_BUTTONS)
         self._surface.request_layer(startup_layer)
 
     @classmethod
@@ -319,10 +316,7 @@ class XTouchCompactSession:
         self._surface.encoder_mode_sent(encoder, mode)
         display = self._surface.encoder_state(encoder).desired_display
         if display is not None:
-            self._send_transport(
-                self._feedback_encoder.encoder_ring_value(encoder, display)
-            )
-            self._surface.encoder_display_sent(encoder, display)
+            self.set_encoder_ring_value(encoder, display)
 
     def set_encoder_ring_value(
         self, encoder: Encoder, display: EncoderRingDisplay
@@ -394,35 +388,26 @@ class XTouchCompactSession:
         """Send only desired feedback that differs from last-sent state."""
         self._require_ready()
         snapshot = self._surface.snapshot()
+        # Setters deduplicate against live last-sent state. In particular, a
+        # mode change can restore the display before we reach its setter.
         for button_state in snapshot.buttons:
-            if (
-                button_state.desired is not None
-                and button_state.desired != button_state.last_sent
-            ):
+            if button_state.desired is not None:
                 self.set_button_led(button_state.button, button_state.desired)
         for encoder_state in snapshot.encoders:
-            if (
-                encoder_state.desired_mode is not None
-                and encoder_state.desired_mode != encoder_state.last_sent_mode
-            ):
+            if encoder_state.desired_mode is not None:
                 self.set_encoder_ring_mode(
                     encoder_state.encoder, encoder_state.desired_mode
                 )
-            if (
-                encoder_state.desired_display is not None
-                and encoder_state.desired_display != encoder_state.last_sent_display
-            ):
+            if encoder_state.desired_display is not None:
                 self.set_encoder_ring_value(
                     encoder_state.encoder, encoder_state.desired_display
                 )
         layer = snapshot.layer
+        # Explicit layer selection always transmits, so sync checks it here.
         if layer.desired is not None and layer.desired != layer.last_sent:
             self.select_layer(layer.desired)
         for status_state in snapshot.status_leds:
-            if (
-                status_state.desired is not None
-                and status_state.desired != status_state.last_sent
-            ):
+            if status_state.desired is not None:
                 self.set_foot_switch_led(status_state.desired)
 
     def __enter__(self) -> XTouchCompactSession:
@@ -490,7 +475,7 @@ class XTouchCompactSession:
         channel = self._feedback_encoder.global_midi_channel
         if isinstance(message, ProgramChange):
             if matches_layer_program_change(message, channel):
-                self._surface.raw_layer_sent()
+                self._surface.invalidate_layer()
             return
         binding = classify_rx_message(message, channel)
         if binding is None:
@@ -500,13 +485,13 @@ class XTouchCompactSession:
         elif binding.operation == "ring_behavior" and isinstance(
             binding.control, Encoder
         ):
-            self._surface.raw_encoder_mode_sent(binding.control)
+            self._surface.invalidate_encoder_mode(binding.control)
         elif binding.operation == "ring_value" and isinstance(binding.control, Encoder):
-            self._surface.raw_encoder_display_sent(binding.control)
+            self._surface.invalidate_encoder_display(binding.control)
         elif binding.operation == "status_led" and isinstance(
             binding.control, FootControl
         ):
-            self._surface.raw_status_sent(binding.control)
+            self._surface.invalidate_status_led(binding.control)
         elif (
             binding.operation == "position"
             and isinstance(binding.control, Fader)

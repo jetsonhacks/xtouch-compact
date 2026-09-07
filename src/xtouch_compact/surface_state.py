@@ -219,7 +219,7 @@ class SurfaceStateController:
             self.status_state(control), last_sent=state
         )
 
-    def raw_encoder_mode_sent(self, encoder: Encoder) -> None:
+    def invalidate_encoder_mode(self, encoder: Encoder) -> None:
         """Invalidate one encoder's ring-mode (and display) history.
 
         A raw ring-mode command has the same hardware side effect as
@@ -233,35 +233,19 @@ class SurfaceStateController:
             last_sent_display=None,
         )
 
-    def raw_encoder_display_sent(self, encoder: Encoder) -> None:
-        """Invalidate one encoder's ring-display last-sent history."""
-        self._encoders[encoder] = replace(
-            self.encoder_state(encoder), last_sent_display=None
-        )
-
-    def raw_status_sent(self, control: FootControl) -> None:
-        """Invalidate one status LED's last-sent history after raw output."""
+    def invalidate_status_led(self, control: FootControl) -> None:
+        """Invalidate one status LED's history while preserving desired state."""
         self._status_leds[control] = replace(self.status_state(control), last_sent=None)
 
-    def raw_layer_sent(self) -> None:
-        """Invalidate layer last-sent history after a raw Program Change."""
+    def invalidate_layer(self) -> None:
+        """Invalidate layer history while preserving desired state."""
         self._layer = replace(self._layer, last_sent=None)
 
     def invalidate_last_sent(self) -> None:
-        self._buttons = {
-            button: replace(state, last_sent=None)
-            for button, state in self._buttons.items()
-        }
-        self._encoders = {
-            encoder: replace(
-                state,
-                last_sent_mode=None,
-                last_sent_display=None,
-            )
-            for encoder, state in self._encoders.items()
-        }
-        self._layer = replace(self._layer, last_sent=None)
-        self._status_leds = {
-            control: replace(state, last_sent=None)
-            for control, state in self._status_leds.items()
-        }
+        for button in self._buttons:
+            self.invalidate_button_led(button)
+        for encoder in self._encoders:
+            self.invalidate_encoder_mode(encoder)
+        self.invalidate_layer()
+        for control in self._status_leds:
+            self.invalidate_status_led(control)
