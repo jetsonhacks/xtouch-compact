@@ -144,13 +144,9 @@ class SurfaceStateController:
             self.invalidate_encoder_display(event.encoder)
 
     def invalidate_button_led(self, button: Button) -> None:
-        """Mark one button's last-sent LED state unknown, keeping desired state.
+        """Forget one button's LED history, preserving its desired state.
 
-        Used where the device may have redrawn the LED locally, and after
-        raw diagnostic output to the button's LED address, so the next
-        matching-value request is not suppressed as a no-op duplicate.
-        Identities without a synchronized LED, including Layer A/B, are
-        ignored.
+        Ignore controls without a synchronized LED, including Layer A/B.
         """
         if button not in self._buttons:
             return
@@ -191,13 +187,10 @@ class SurfaceStateController:
         )
 
     def invalidate_encoder_display(self, encoder: Encoder) -> None:
-        """Mark one encoder's last-sent ring display unknown.
+        """Forget ring-display history, preserving the desired display.
 
-        A physical rotation redraws the ring locally in every ring mode,
-        so a remote display the session already believes it sent may no
-        longer be visible. Call this once per decoded physical rotation
-        so the next matching-value display request is not suppressed as a
-        no-op duplicate. See ``docs/hardware-observations.md``.
+        Physical rotation or raw display output can replace the host's display;
+        see docs/hardware-observations.md.
         """
         self._encoders[encoder] = replace(
             self.encoder_state(encoder), last_sent_display=None
@@ -220,12 +213,9 @@ class SurfaceStateController:
         )
 
     def invalidate_encoder_mode(self, encoder: Encoder) -> None:
-        """Invalidate one encoder's ring-mode (and display) history.
+        """Forget ring-mode and display history, preserving desired values.
 
-        A raw ring-mode command has the same hardware side effect as
-        :meth:`encoder_mode_sent`: it redraws the ring from the local
-        encoder value and replaces any remotely assigned display. Both
-        histories are therefore invalidated together, not just the mode.
+        A raw mode command redraws the display too; see docs/hardware-observations.md.
         """
         self._encoders[encoder] = replace(
             self.encoder_state(encoder),

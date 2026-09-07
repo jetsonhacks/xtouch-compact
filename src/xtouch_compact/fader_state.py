@@ -18,15 +18,12 @@ class FaderOwner(Enum):
 
 @dataclass(frozen=True, slots=True)
 class FaderState:
-    """Read-only snapshot of application and device state for one fader.
+    """Immutable snapshot of a fader's desired, observed, and commanded state.
 
-    ``observation_is_current`` means only that no motor command has been
-    sent since ``observed_value`` was last reported: it is not hardware
-    acknowledgement or a guarantee of present physical position. A decoded
-    position report sets it true; a successfully sent motor command sets
-    it false. Ordinary host-driven motor travel has no reliable position
-    echo, so a stale (non-current) observation must not suppress a needed
-    command, while touch alone does not refresh it.
+    observation_is_current becomes true on a position report and false after
+    a successful motor send; touch alone does not refresh it. It is not a physical
+    position guarantee: ordinary motor travel has no reliable position echo.
+    See docs/usage.md#fader-ownership for reconciliation rules.
     """
 
     desired_value: int | None = None

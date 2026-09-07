@@ -1,4 +1,4 @@
-"""Narrow X-TOUCH connection initialization and receive pipeline."""
+"""Session lifecycle, physical input, and synchronized surface feedback."""
 
 from __future__ import annotations
 
@@ -69,16 +69,12 @@ class ReceivedInput:
 
 
 class XTouchCompactSession:
-    """The stable application entry point: a semantic bidirectional session.
+    """Bidirectional session for the fixed factory X-TOUCH COMPACT profile.
 
-    Application code reasons about physical controls, typed physical
-    events, semantic feedback values, and this lifecycle; it does not need
-    transport, ALSA, or MIDI internals. See ``docs/api.md`` for the
-    full lifecycle, reconnect, and feedback-synchronization contract.
-    Also usable as a context manager: ``__enter__`` performs ``connect()``
-    then ``initialize()`` and returns the ready session; ``__exit__`` always
-    calls ``close()``. :meth:`open` constructs a session with the default
-    ALSA transport and bundled device map.
+    As a context manager, connects and initializes on entry and closes on exit.
+    Receiving, sending, feedback setters, and sync_feedback() require READY.
+    Last-sent feedback records successful transport sends, not device acknowledgements.
+    See docs/api.md for the contract and docs/usage.md for examples.
     """
 
     def __init__(
@@ -109,19 +105,11 @@ class XTouchCompactSession:
         port_name: str | None = None,
         transport: MidiTransport | None = None,
     ) -> XTouchCompactSession:
-        """Construct a session with the default ALSA transport.
+        """Construct a disconnected session; no attached device is required.
 
-        Does not connect and does not require the device to be attached.
-        Uses the fixed factory device map; there is no configurable
-        device specification. Use as a context manager to connect,
-        initialize, and close:
-
-        ``with XTouchCompactSession.open(global_midi_channel=2) as session:``
-
-        ``port_name`` is forwarded to :class:`AlsaSequencerTransport` when
-        ``transport`` is omitted. Pass ``transport`` only for tests or a
-        non-ALSA backend; the explicit constructor remains available for
-        the same purpose.
+        Uses ALSA unless transport is supplied. port_name filters ALSA discovery
+        and cannot be combined with a supplied transport. Use as a context manager
+        to connect, initialize, and close automatically.
         """
         if transport is None:
             from .alsa_transport import AlsaSequencerTransport
@@ -142,10 +130,9 @@ class XTouchCompactSession:
         return self._state
 
     def connect(self) -> None:
-        """Connect the transport without yet publishing semantic input.
+        """Connect without enabling input; call initialize() before use.
 
-        A failure at any point, including ``BaseException`` such as
-        ``KeyboardInterrupt``, leaves the session ``DISCONNECTED``.
+        Requires DISCONNECTED. Failure, including interruption, leaves it disconnected.
         """
         if self._state is not SessionState.DISCONNECTED:
             raise LifecycleError("X-TOUCH session is already connected")
@@ -170,23 +157,13 @@ class XTouchCompactSession:
         self._state = SessionState.READY
 
     def reconnect(self) -> None:
-        """Close, rediscover, reconnect, reassert layer, and restore feedback.
+        """Close, reconnect, reassert the desired layer, and restore feedback.
 
-        ``reconnect()`` is a single synchronous transaction: it (1) performs
-        fresh endpoint discovery when using the default ALSA transport,
-        (2) establishes a fresh transport
-        connection, (3) performs the mandatory startup layer assertion, and
-        (4) restores desired surface feedback (button LEDs, encoder ring
-        modes and displays, layer, and the foot-switch status LED) through
-        :meth:`sync_feedback`. It resets fader interaction state (desired
-        and observed positions, touch, ownership, and motor-command history)
-        but never repositions motorized faders automatically. Every stage
-        must succeed before the session reports ``READY``; a failure at any
-        stage leaves the session ``DISCONNECTED`` with partial resources
-        closed and desired feedback preserved for a later attempt. Passive
-        ``receive()``/``receive_input()`` polling may not itself observe
-        device disappearance on every host stack; call ``reconnect()``
-        explicitly rather than relying on receive timeouts to detect loss.
+        The default ALSA transport rediscovers the endpoint. Fader state resets;
+        motors are never repositioned automatically. On failure, the session is
+        disconnected and desired non-fader feedback is retained for retry.
+        Receive timeouts cannot establish device loss; recovery must be explicit.
+        See docs/usage.md#reconnect.
         """
         self.close()
         try:
@@ -199,30 +176,20 @@ class XTouchCompactSession:
             raise
 
     def receive(self, timeout: float | None = None) -> PhysicalControlEvent | None:
-        """Block for one decoded physical event, or ``None`` if unavailable.
+        """Receive one physical event, or None on timeout or unsupported input.
 
-        Requires ``READY``. ``timeout`` is seconds to wait. ``None`` blocks
-        indefinitely; ``0`` polls and returns immediately; a positive value
-        waits up to that many seconds. Returns ``None`` when the timeout
-        elapses with no message, and also when a message arrives that has
-        no physical-event meaning (for example unmapped or diagnostic-only
-        traffic) — use :meth:`receive_input` to distinguish those cases.
-        This is a synchronous polling interface; there is no callback,
-        thread, or asyncio integration.
+        Requires READY. Timeout is in seconds: None blocks indefinitely, zero
+        polls, and a positive value bounds the wait. Use receive_input() to
+        inspect supported MIDI that has no physical-event meaning.
         """
         received = self.receive_input(timeout=timeout)
         return None if received is None else received.physical_event
 
     def receive_input(self, timeout: float | None = None) -> ReceivedInput | None:
-        """Receive one raw MIDI message alongside its decoded event.
+        """Receive supported raw MIDI and its optional physical event.
 
-        Requires ``READY``. ``timeout`` has the same meaning as
-        :meth:`receive`. Returns ``None`` on timeout or when the transport
-        discards an unsupported ALSA event. Otherwise returns a
-        :class:`ReceivedInput` whose
-        ``physical_event`` is ``None`` for messages with no supported
-        physical-control meaning, while ``message`` always carries the raw
-        typed MIDI for diagnostics.
+        Requires READY; timeout follows receive(). Returns None on timeout or an
+        unsupported ALSA event. A received message can have physical_event=None.
         """
         self._require_ready()
         message = self._receive_transport(timeout)
@@ -234,41 +201,27 @@ class XTouchCompactSession:
         return ReceivedInput(message, physical_event)
 
     def send(self, message: RawMidiMessage) -> None:
-        """Send diagnostic MIDI immediately, bypassing deduplication and touch.
+        """Send raw MIDI immediately, bypassing deduplication and touch ownership.
 
-        After a successful send on the configured output channel, matching
-        button/ring/status/layer commands invalidate their last-sent history.
-        A ring-mode command also invalidates the ring's display history.
-        Later setters or sync_feedback() can restore known desired feedback.
-
-        A matching motor command instead records its raw value as
-        last_commanded_value and marks the observation non-current. Desired
-        value, observed position, and touch ownership remain unchanged.
-        Subsequent set_fader() calls still defer while touched and suppress
-        redundant commands; sync_feedback() does not reconcile faders.
-
-        Wrong-channel and unmapped output has no tracking effect after a
-        successful send. Failed sends skip this raw-output bookkeeping, but
-        TransportConnectionError still disconnects and resets live fader
-        state and feedback history through normal connection-loss handling.
-        See docs/usage.md#raw-diagnostic-output for details.
+        Requires READY. Successful mapped output on the RX channel invalidates
+        its feedback history; ring-mode output also invalidates display history.
+        Raw fader output instead updates last_commanded_value and marks the
+        observation non-current, preserving desired/observed values and ownership.
+        sync_feedback() never restores faders. Unmapped or wrong-channel output
+        has no tracking effect. Failed sends skip this bookkeeping;
+        TransportConnectionError disconnects and resets live fader state and
+        feedback history. See docs/usage.md#raw-diagnostic-output.
         """
         self._require_ready()
         self._send_transport(message)
         self._invalidate_raw_feedback_effect(message)
 
     def set_fader(self, fader: Fader, value: int) -> None:
-        """Set the application-desired position, subject to touch ownership.
+        """Request a fader position, deferring motor commands while touched.
 
-        This does not mean "force the motor immediately regardless of touch
-        state." It updates the fader's desired position and sends a motor
-        command only while that fader is application-owned (untouched); a
-        touched fader belongs to :attr:`~xtouch_compact.FaderOwner.HUMAN`
-        and defers the motor command until release. See :meth:`fader_state`
-        for the full snapshot including desired value, observed value, touch
-        state, owner, and last commanded value. Fader state resets on
-        ``close()``/``reconnect()``; motor positions are never restored
-        automatically.
+        Requires READY. Release reconciles the desired position; redundant
+        commands are suppressed. close()/reconnect() reset fader state without
+        restoring motor positions. See fader_state() and docs/usage.md#fader-ownership.
         """
         self._require_ready()
         message = self._feedback_encoder.fader(fader, value)
@@ -281,14 +234,9 @@ class XTouchCompactSession:
         return self._faders.state(fader)
 
     def set_button_led(self, button: Button, state: ButtonLedState) -> None:
-        """Set one assignable button LED's desired state.
+        """Set desired LED feedback, sending only if last-sent state differs.
 
-        Updates desired feedback state and sends only when it differs from
-        the last-sent value (semantic equality suppresses repeated
-        commands). "Last-sent" means the last command this session
-        successfully handed to the transport; the device gives no
-        acknowledgement, so this is command history, not confirmed physical
-        state. See :meth:`button_feedback_state`.
+        Requires READY. Last-sent records a successful send, not hardware confirmation.
         """
         self._require_ready()
         message = self._feedback_encoder.button_led(button, state)
@@ -298,15 +246,10 @@ class XTouchCompactSession:
         self._surface.button_sent(button, state)
 
     def set_encoder_ring_mode(self, encoder: Encoder, mode: EncoderRingMode) -> None:
-        """Select the display mode for one encoder LED ring.
+        """Set a ring's display mode and restore its known desired display.
 
-        Mode and display are separate semantic concepts, but hardware
-        characterization found that a mode change redraws the ring from
-        the local encoder value and replaces any remotely assigned
-        display. After a successful mode change, this method therefore
-        automatically resends the encoder's known desired display so
-        callers do not have to manually restore it after every mode change.
-        See ``docs/hardware-observations.md``.
+        Requires READY; modes matching last-sent state are skipped. Mode changes
+        redraw the ring, so its desired display is resent after the mode succeeds.
         """
         self._require_ready()
         message = self._feedback_encoder.encoder_ring_mode(encoder, mode)
@@ -330,15 +273,10 @@ class XTouchCompactSession:
         self._surface.encoder_display_sent(encoder, display)
 
     def select_layer(self, layer: Layer) -> None:
-        """Select Layer A or Layer B and always transmit the command.
+        """Select Layer A or B. Requires READY and always transmits.
 
-        Unlike the other semantic setters, this is not an ordinary
-        deduplicated feedback setter: it always sends its Program Change,
-        even when tracked desired and last-sent layer state already match.
-        Physical Layer A/B button presses on the device are not reliably
-        reported to the host, so last-sent state alone cannot prove the
-        device's actual layer. Every explicit call is therefore a device-
-        state assertion, not just a state update.
+        Even repeated selections assert device state: physical layer changes
+        are not reliably reported to the host.
         """
         self._require_ready()
         message = self._feedback_encoder.layer(layer)
@@ -468,10 +406,7 @@ class XTouchCompactSession:
         self._faders.motor_command_sent(fader, value)
 
     def _invalidate_raw_feedback_effect(self, message: RawMidiMessage) -> None:
-        """Invalidate tracked command history a successful raw send affects.
-
-        See :meth:`send` for the full contract this implements.
-        """
+        """Update tracking after a successful raw send; see send() for effects."""
         channel = self._feedback_encoder.global_midi_channel
         if isinstance(message, ProgramChange):
             if matches_layer_program_change(message, channel):

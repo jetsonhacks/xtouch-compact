@@ -25,11 +25,7 @@ _POLL_TIMEOUT_SECONDS = 1e-6
 
 
 def _event_input_timeout(timeout: float | None) -> float | None:
-    """Map this library's receive timeout onto alsa-midi's ``event_input``.
-
-    Public contract: ``None`` blocks, ``0`` polls, a positive value waits
-    that many seconds. Do not forward ``0`` to alsa-midi.
-    """
+    """Translate timeout seconds for ALSA: None blocks and zero must poll."""
     if timeout is None:
         return None
     if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
@@ -42,14 +38,7 @@ def _event_input_timeout(timeout: float | None) -> float | None:
 
 
 def _connect_failure_message(error: BaseException) -> str:
-    """Classify a client-creation failure into an actionable message.
-
-    ``alsa-midi`` reports a missing ``/dev/snd/seq`` as an ``ALSAError``
-    (or, for some backends, an ``OSError``) carrying an ``ENOENT`` errno.
-    That specific case has one dominant real-world cause — a kernel built
-    without ALSA Sequencer support, notably stock Jetson kernels — so it
-    gets its own message instead of a generic wrapper.
-    """
+    """Describe a connect failure, identifying ENOENT as missing /dev/snd/seq."""
     if _is_enoent(error):
         return (
             "ALSA Sequencer device /dev/snd/seq is missing; the running "
@@ -285,11 +274,9 @@ class AlsaSequencerTransport:
         return endpoint
 
     def receive(self, timeout: float | None = None) -> RawMidiMessage | None:
-        """Receive one event; timeouts and unsupported events return ``None``.
+        """Receive one MIDI message; return None for timeout or unsupported traffic.
 
-        ``timeout`` is seconds to wait. ``None`` blocks indefinitely. ``0``
-        polls and returns immediately. A positive value waits up to that
-        many seconds.
+        Timeout is in seconds: None blocks indefinitely, zero polls.
         """
         client, _ = self._connected_resources()
         event_timeout = _event_input_timeout(timeout)

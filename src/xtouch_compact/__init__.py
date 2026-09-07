@@ -1,37 +1,9 @@
-"""Python support for the Behringer X-TOUCH COMPACT.
+"""Python support for the Behringer X-TOUCH COMPACT in Standard MIDI mode.
 
-This package exposes a stable application interface for treating the
-X-TOUCH COMPACT as a semantic bidirectional physical control surface.
-Application code should import from this package root; it should not need
-to import implementation modules (``device_map``, ``feedback_encoder``,
-``fader_state``, ``surface_state``) directly for normal use. The library
-supports only the fixed factory Standard MIDI profile in ``device_map``;
-there is no runtime device-specification loading or injection.
-
-The exports fall into five categories:
-
-- session/lifecycle: :class:`XTouchCompactSession`, :class:`SessionState`,
-  :class:`ReceivedInput`;
-- physical control identities: :class:`Fader`, :class:`Encoder`,
-  :class:`Button`, :class:`Layer`, :class:`FootControl`;
-- physical events: the ``*Pressed``/``*Released``/``*Reported``/``*Touched``
-  dataclasses and :data:`PhysicalControlEvent`;
-- semantic feedback and state types: :class:`ButtonLedState`,
-  :class:`EncoderRingMode`, :class:`EncoderRingDisplay`,
-  :class:`StatusLedState`, :class:`FaderState`, :class:`FaderOwner`, and the
-  surface-feedback snapshot types;
-- errors: the :class:`XTouchCompactError` hierarchy in ``errors``.
-
-A small set of advanced/diagnostic transport types
-(:class:`AlsaSequencerTransport`, :class:`SequencerEndpoint`,
-:class:`InboundDecoder`, the raw MIDI message types, and the ALSA
-conversion helpers) remain exported for diagnostics, opt-in hardware tools,
-and tests. Normal application code built only on the session API does not
-need them. :class:`MidiTransport` is in this same advanced tier: it is the
-structural protocol ``XTouchCompactSession``'s ``transport`` argument must
-satisfy (``connect``/``receive``/``send``/``close``), needed only by code
-that supplies a non-ALSA transport in place of
-:class:`AlsaSequencerTransport`.
+Import the session, controls, events, feedback types, and errors from this
+package. Only the fixed factory MIDI profile is supported.
+See docs/api.md for the API and advanced transport exports, and
+docs/usage.md for examples.
 """
 
 from .alsa_transport import (

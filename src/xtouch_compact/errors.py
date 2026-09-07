@@ -1,9 +1,4 @@
-"""Public exception hierarchy for the X-TOUCH COMPACT application interface.
-
-Application code should catch these types rather than ALSA-specific or
-built-in exceptions. Each subclass documents which broad category of failure
-it represents; most public session methods raise only from this hierarchy.
-"""
+"""Public exceptions for session lifecycle, discovery, and transport failures."""
 
 from __future__ import annotations
 
@@ -13,12 +8,7 @@ class XTouchCompactError(RuntimeError):
 
 
 class LifecycleError(XTouchCompactError):
-    """A session method was called from an unsupported lifecycle state.
-
-    Raised by ``connect()``, ``initialize()``, and every method that
-    requires ``SessionState.READY`` when the session is not in the required
-    state.
-    """
+    """A session operation was called from an unsupported lifecycle state."""
 
 
 class SessionConfigurationError(XTouchCompactError, ValueError):

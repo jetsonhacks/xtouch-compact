@@ -1,22 +1,9 @@
-"""Fixed, typed factory X-TOUCH COMPACT device map (Standard MIDI mode).
+"""Immutable factory X-TOUCH COMPACT mappings for Standard MIDI mode.
 
-This module is the authoritative runtime device profile. It represents the
-factory Layer A ("Mixer Control") and Layer B ("Instrument Control") TX
-presets and the GLOBAL_CH RX mappings, as documented in the Behringer
-X-TOUCH COMPACT Quick Start Guide (V6.0, 2024; TX pages 29-30, RX page 32)
-together with the empirical results recorded in
-``docs/hardware-observations.md``.
-
-Only the factory mappings are represented; mappings changed with the
-X-TOUCH Editor are out of scope. The historical machine-readable
-characterization document, ``specs/xtouch-compact-midi.yaml`` (see
-``specs/README.md``), remains in the repository as evidence but is no
-longer read at runtime and is not required to stay in sync with this
-module.
-
-Every structure here is built once at import time and exposed only as a
-read-only mapping or frozen dataclass; there is no supported way to mutate
-it or substitute an alternate device profile at runtime.
+Defines Layer A/B TX and Global MIDI Channel RX mappings from the Behringer
+Quick Start Guide V6.0 (2024), pp. 29–30 and 32, with corrections recorded
+in docs/hardware-observations.md. Custom editor mappings are unsupported.
+The YAML in specs/ is historical evidence, not a runtime configuration.
 """
 
 from __future__ import annotations
@@ -321,16 +308,10 @@ RX_CONTROL_INDEX: Mapping[tuple[MappedControl, str], RxBinding] = (
 def classify_rx_message(
     message: RawMidiMessage, global_midi_channel: int
 ) -> RxBinding | None:
-    """Return the RX binding a raw outbound message would address, if any.
+    """Return the RX binding addressed by a raw outbound message, or None.
 
-    Used only to identify which tracked feedback a diagnostic raw
-    ``send()`` affects, so its command history can be invalidated after
-    successful transmission -- never to route, rewrite, or reinterpret the
-    message itself. Matches strictly on message type, address number, and
-    the configured Global MIDI Channel; a message on another channel or at
-    an unmapped address returns ``None``. Layer selection (Program Change)
-    has no RX binding and is not covered here; see
-    :func:`matches_layer_program_change`.
+    Matches type, number, and Global MIDI Channel for feedback invalidation.
+    Program Change has no RX binding; use matches_layer_program_change().
     """
     if isinstance(message, (NoteOn, NoteOff)):
         if message.midi_channel != global_midi_channel:
@@ -348,12 +329,7 @@ def classify_rx_message(
 def matches_layer_program_change(
     message: RawMidiMessage, global_midi_channel: int
 ) -> bool:
-    """Return whether a raw message is a Program Change asserting a layer.
-
-    Layer selection has no ``RxBinding`` entry (see
-    :func:`classify_rx_message`), so it is matched independently against
-    :data:`PRESET_LAYER_VALUES` on the configured Global MIDI Channel.
-    """
+    """Return whether a Program Change selects a known layer on the RX channel."""
     return (
         isinstance(message, ProgramChange)
         and message.midi_channel == global_midi_channel
